@@ -1,0 +1,6 @@
+species,dose,days_since_treatment,weight,residue_ppm
+cow,200,3,350,0.5
+cow,400,1,350,2.0
+buffalo,150,4,420,0.2
+goat,100,2,40,1.5
+cow,250,5,400,0.1

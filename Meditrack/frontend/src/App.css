@@ -1,0 +1,143 @@
+/* === src/App.css (Component & Layout Styles) === */
+
+/* --- Main App Layout --- */
+.App {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* --- Header --- */
+.App-header {
+  background-color: var(--primary);
+  color: white;
+  padding: 15px 20px;
+  margin: 20px 0;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.App-header h1 {
+  color: white;
+  margin: 0;
+}
+
+.header-user {
+  font-size: 1.1em;
+}
+.header-user button {
+  background-color: var(--accent);
+  margin-left: 15px;
+}
+.header-user button:hover {
+  background-color: #c0392b;
+}
+
+/* --- Main Container for Dashboards & Auth --- */
+.container {
+  background-color: white;
+  border-radius: 8px;
+  padding: 25px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+}
+
+/* --- Auth Forms (Login/Register) --- */
+.auth-container {
+  max-width: 500px;
+  margin: 20px auto;
+}
+.auth-container button {
+  width: 100%;
+}
+/* Toggle button */
+.auth-container .toggle-btn {
+  background-color: transparent;
+  color: var(--secondary);
+  width: auto;
+  margin-top: 10px;
+  text-decoration: underline;
+}
+
+/* --- Admin Tab Navigation --- */
+.admin-nav {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--light);
+}
+
+.admin-nav button {
+  padding: 10px 20px;
+  background: none;
+  color: #333;
+  border: none;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s;
+}
+
+.admin-nav button.active {
+  border-bottom: 3px solid var(--secondary);
+  color: var(--secondary);
+  font-weight: 600;
+}
+
+/* --- Admin Dashboard List Layouts --- */
+.admin-list-layout {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.city-list, .professionals-list {
+  border: 1px solid var(--light);
+  background-color: #fdfdfd;
+  padding: 15px;
+  border-radius: 4px;
+  flex: 1;
+}
+
+.city-list h4, .professionals-list h4 {
+  border-bottom: 2px solid var(--light);
+  padding-bottom: 10px;
+}
+
+.city-list ul, .professionals-list ul {
+  list-style: none;
+  padding: 0;
+}
+
+.city-list li {
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+.city-list li:hover {
+  background-color: var(--light);
+}
+
+.city-list li.selected {
+  background-color: var(--secondary);
+  color: white;
+  font-weight: bold;
+}
+
+/* --- MRL Status (Manager & Farmer) --- */
+.status-safe {
+  color: var(--success);
+  font-weight: bold;
+}
+
+.status-danger {
+  color: var(--danger);
+  font-weight: bold;
+  border: 2px solid var(--danger);
+  padding: 10px;
+  border-radius: 4px;
+  display: inline-block;
+}
