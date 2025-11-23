@@ -1,0 +1,35 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+
+# Build output
+dist/
+build/
+
+# Logs
+logs/
+*.log
+*.stdout
+*.stderr
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+
+# Vite
+.vite/
+
+# Python ML (if needed)
+__pycache__/
+*.pyc
+*.pkl
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/

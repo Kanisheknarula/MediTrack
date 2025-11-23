@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 5000;
 
 // This is your "guest list"
 const allowedOrigins = [
-  'https://amumrlmoniteringplatform.netlify.app', // Your live Netlify site
+ // 'https://amumrlmoniteringplatform.netlify.app', // Your live Netlify site
   'http://localhost:5173'  // Your local dev site
 ];
 
