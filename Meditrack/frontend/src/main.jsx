@@ -8,7 +8,11 @@ import axios from 'axios';
 import { ChakraProvider } from '@chakra-ui/react';
 
 // This is your live Render server URL
-axios.defaults.baseURL = 'https://meditrack-server-fmx9.onrender.com';
+//axios.defaults.baseURL = 'https://meditrack-server-fmx9.onrender.com';
+
+axios.defaults.baseURL =
+import.meta.env.VITE_API_URL || 'https://meditrack-server-fmx9.onrender.com';
+
 
 // This is your interceptor for the token
 axios.interceptors.request.use(
