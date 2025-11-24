@@ -1,103 +1,84 @@
-// Import the packages we installed
+// ===============================
+//  IMPORTS
+// ===============================
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+require('dotenv').config();  // Load .env variables
 
-// This line loads the .env file variables (like your DATABASE_URL)
-require('dotenv').config();
-
-// --- 1. Create the Express App ---
+// ===============================
+//  EXPRESS SETUP
+// ===============================
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// --- 2. Add "Middleware" ---
+// ===============================
+//  MIDDLEWARE
+// ===============================
+app.use(express.json());  // Parse JSON bodies
 
-// This is your "guest list"
+// CORS allowed origins
 const allowedOrigins = [
- // 'https://amumrlmoniteringplatform.netlify.app', // Your live Netlify site
-  'http://localhost:5173'  // Your local dev site
+  'http://localhost:5173',   // Frontend (local)
+  // 'https://amumrlmoniteringplatform.netlify.app' // Production (optional)
 ];
 
-// Allows the server to understand JSON data
-app.use(express.json()); 
-
-// --- THIS IS THE FINAL CORS CONFIGURATION ---
 app.use(cors({
   origin: function (origin, callback) {
-    
-    // --- THIS IS THE NEW DEBUGGING LINE ---
-    console.log('--- REQUEST ORIGIN: ---', origin);
+    console.log('--- REQUEST ORIGIN:', origin);
 
-    // allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) {
-      console.log('--- ACCESS GRANTED (No Origin) ---');
-      return callback(null, true);
+    if (!origin) return callback(null, true);
+
+    if (!allowedOrigins.includes(origin)) {
+      console.log('❌ CORS BLOCKED:', origin);
+      return callback(new Error("CORS Not Allowed"), false);
     }
 
-    if (allowedOrigins.indexOf(origin) === -1) {
-      console.log('--- ACCESS DENIED ---');
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
-    }
-
-    console.log('--- ACCESS GRANTED ---');
+    console.log('✅ CORS ALLOWED:', origin);
     return callback(null, true);
   },
-  credentials: true
+  credentials: true,
 }));
-// --- END OF CORS CONFIGURATION ---
 
+// ===============================
+//  ROUTES IMPORTS
+// ===============================
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/animals', require('./routes/animal'));
+app.use('/api/requests', require('./routes/request'));
+app.use('/api/prescriptions', require('./routes/prescription'));
+app.use('/api/pharmacist', require('./routes/pharmacist'));
+app.use('/api/manager', require('./routes/manager'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/ml', require('./routes/ml'));
+app.use('/api/registrar', require('./routes/registrar'));
 
-// --- Connect the Auth Routes ---
-const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes);
+// ⭐ NEW — AMU ROUTES
+app.use('/api/amu', require('./routes/amuRoutes'));
 
-const animalRoutes = require('./routes/animal');
-app.use('/api/animals', animalRoutes);
+// ===============================
+//  BLOCKCHAIN INITIALIZATION
+// ===============================
+const { initBlockchain } = require('./blockchain/blockchainService');
+initBlockchain();   // This prints "Blockchain Connected Successfully"
 
-const requestRoutes = require('./routes/request');
-app.use('/api/requests', requestRoutes);
-
-const prescriptionRoutes = require('./routes/prescription');
-app.use('/api/prescriptions', prescriptionRoutes);
-
-const pharmacistRoutes = require('./routes/pharmacist');
-app.use('/api/pharmacist', pharmacistRoutes);
-
-const managerRoutes = require('./routes/manager');
-app.use('/api/manager', managerRoutes);
-
-const adminRoutes = require('./routes/admin');
-app.use('/api/admin', adminRoutes);
-
-const mlRoutes = require('./routes/ml');
-app.use('/api/ml', mlRoutes);
-
-
-
-
-// --- ADD THESE NEW LINES ---
-const registrarRoutes = require('./routes/registrar');
-app.use('/api/registrar', registrarRoutes);
-// ---------------------------
-
-
-
-// ... MongoDB Connection ...
+// ===============================
+//  MONGODB CONNECTION
+// ===============================
 mongoose.connect(process.env.DATABASE_URL)
-  .then(() => {
-    console.log('✅ MongoDB Connected!');
-  })
-  .catch((err) => {
-    console.error('❌ Error connecting to MongoDB:', err.message);
-  });
+  .then(() => console.log("✅ MongoDB Connected!"))
+  .catch(err => console.error("❌ MongoDB Error:", err.message));
 
-// ... Test Route ...
+// ===============================
+//  ROOT TEST ROUTE
+// ===============================
 app.get('/', (req, res) => {
-  res.send('Hello! The MediTrack server is running.');
+  res.send("Hello! The MediTrack backend is running.");
 });
 
-// ... Start the Server ...
+// ===============================
+//  START SERVER
+// ===============================
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });

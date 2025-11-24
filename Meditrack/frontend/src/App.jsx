@@ -7,6 +7,8 @@ import ManagerDashboard from './components/ManagerDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import PublicDashboard from './components/PublicDashboard';
 import RegistrarDashboard from './components/RegistrarDashboard';
+// import AmuTestForm from "./AmuTestForm";
+
 import './App.css'; // <-- We are now using this file
 
 function App() {
@@ -50,18 +52,29 @@ function App() {
       </header>
 
       <main>
+        {/* 1) Normal app behaviour (dashboards / public + auth) */}
         {token ? (
-          // --- IF USER IS LOGGED IN, show dashboards ---
           <div className="dashboard-container">
-            {user.role === 'Farmer' && <FarmerDashboard user={user} token={token} />}
-            {user.role === 'Vet' && <VetDashboard user={user} token={token} />}
-            {user.role === 'Pharmacist' && <PharmacistDashboard user={user} token={token} />}
-            {user.role === 'Manager' && <ManagerDashboard user={user} token={token} />}
-            {user.role === 'Admin' && <AdminDashboard user={user} token={token} />}
-            {user.role === 'Registrar' && <RegistrarDashboard user={user} token={token}/>}
+            {user.role === "Farmer" && (
+              <FarmerDashboard user={user} token={token} />
+            )}
+            {user.role === "Vet" && (
+              <VetDashboard user={user} token={token} />
+            )}
+            {user.role === "Pharmacist" && (
+              <PharmacistDashboard user={user} token={token} />
+            )}
+            {user.role === "Manager" && (
+              <ManagerDashboard user={user} token={token} />
+            )}
+            {user.role === "Admin" && (
+              <AdminDashboard user={user} token={token} />
+            )}
+            {user.role === "Registrar" && (
+              <RegistrarDashboard user={user} token={token} />
+            )}
           </div>
         ) : (
-          // --- IF USER IS NOT LOGGED IN, show public page & auth ---
           <>
             <PublicDashboard />
             <div className="auth-container container">
@@ -69,7 +82,13 @@ function App() {
             </div>
           </>
         )}
+
+        {/* 2) AMU + Blockchain test form (visible always for now)
+        <section style={{ marginTop: "32px" }}>
+          <AmuTestForm />
+        </section> */}
       </main>
+
     </div>
   );
 }
