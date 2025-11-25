@@ -46,7 +46,10 @@ app.use(cors({
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/animals', require('./routes/animal'));
 app.use('/api/requests', require('./routes/request'));
-app.use('/api/prescriptions', require('./routes/prescription'));
+
+// ⭐ FIXED — Use singular everywhere
+app.use('/api/prescription', require('./routes/prescription'));
+
 app.use('/api/pharmacist', require('./routes/pharmacist'));
 app.use('/api/manager', require('./routes/manager'));
 app.use('/api/admin', require('./routes/admin'));
