@@ -1,28 +1,47 @@
-const mongoose = require('mongoose');
+// backend/models/Bill.js
 
-const billSchema = new mongoose.Schema({
-  prescriptionId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Prescription',
-    required: true,
-  },
-  pharmacistId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-  },
-  // We'll just copy the items from the prescription for the bill
-  items: [
-    {
-      name: String,
-      dosage: String,
-      price: Number, // The pharmacist adds the price
-    }
-  ],
-  totalAmount: {
-    type: Number,
-    required: true,
-  },
-}, { timestamps: true });
+const mongoose = require("mongoose");
 
-module.exports = mongoose.model('Bill', billSchema);
+const billSchema = new mongoose.Schema(
+  {
+    // Which prescription this bill is for
+    prescriptionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Prescription",
+      required: true,
+    },
+
+    // Which pharmacist generated this bill
+    pharmacistId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    // Basic display fields (adjust names as you like)
+    farmerName: { type: String },
+    animalTagId: { type: String },
+
+    // Line items in the bill (optional structure)
+    items: [
+      {
+        name: { type: String },
+        quantity: { type: Number },
+        price: { type: Number },
+      },
+    ],
+
+    // Total billed amount
+    totalAmount: { type: Number, required: true },
+
+    status: {
+      type: String,
+      default: "Paid",
+    },
+  },
+  {
+    timestamps: true, // creates createdAt, updatedAt
+  }
+);
+
+module.exports = mongoose.model("Bill", billSchema);

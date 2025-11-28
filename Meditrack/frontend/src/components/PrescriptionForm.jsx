@@ -29,7 +29,7 @@ import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 // =====================================================================
 //  COMPONENT
 // =====================================================================
-const PrescriptionForm = ({ request, vetId, onClose }) => {
+const PrescriptionForm = ({ request, vetId, onClose , onCreated }) => {
 
   const [medicines, setMedicines] = useState([{ name: "", dosage: "" }]);
   const [withdrawalPeriodDays, setWithdrawalPeriodDays] = useState(7);
@@ -101,9 +101,14 @@ const PrescriptionForm = ({ request, vetId, onClose }) => {
         title: "Prescription Created!",
         status: "success",
         duration: 3000,
+        isClosable: true,
       });
 
       setTxHash(response.data.txHash);
+
+      if (onCreated) {
+  onCreated();
+}
 
       setTimeout(() => {
         onClose();
