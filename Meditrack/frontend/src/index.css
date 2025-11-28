@@ -623,6 +623,44 @@ h1,h2,h3 { font-family: "Poppins", Inter, system-ui, sans-serif; font-weight:600
   cursor: pointer;
 }
 
+/* your existing styles ... */
+/* your existing styles ... */
+/* your existing styles ... */
+
+/* -------- DARK THEME OVERRIDES -------- */
+:root.dark {
+  --primary: #111827;
+  --secondary: #60a5fa;
+  --accent: #f97373;
+
+  --success: #22c55e;
+  --danger: #f97373;
+  --warning: #facc15;
+
+  --light: #020617;
+  --dark: #e5e7eb;
+
+  --bg-start: #020617;
+  --bg-mid: #020617;
+  --bg-end: #020617;
+
+  --nav-bg-from: #020617;
+  --nav-bg-to: #111827;
+  --nav-text: #e5e7eb;
+}
+
+/* Apply dark background */
+:root.dark body {
+  background: radial-gradient(
+    circle at top,
+    #020617 0%,
+    #111827 40%,
+    #020617 100%
+  );
+  color: var(--dark);
+}
+
+
 
 
 /* responsive tweaks to make layout feel spacious */

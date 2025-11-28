@@ -1,26 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import PrescriptionForm from './PrescriptionForm'; // This will be the next file we style
+// frontend/src/components/VetDashboard.jsx
 
-// --- NEW CHAKRA IMPORTS ---
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import PrescriptionForm from "./PrescriptionForm";
+
 import {
   Box,
   Button,
   Heading,
   VStack,
-  useToast, // Better than setMessage
+  useToast,
   Card,
   CardHeader,
   CardBody,
   Text,
-  HStack, // Horizontal Stack
-  Spacer, // Puts space between items
+  HStack,
+  Spacer,
   Alert,
   AlertIcon,
   List,
   ListItem,
-  ListIcon,
-  // --- For the new Decline & Prescriptions Modal ---
   Modal,
   ModalOverlay,
   ModalContent,
@@ -28,51 +27,43 @@ import {
   ModalFooter,
   ModalBody,
   ModalCloseButton,
-  useDisclosure, // Hook to open/close modal
+  useDisclosure,
   Textarea,
   FormControl,
   FormLabel,
-  Divider,
-  Stack,
-  Badge,
-} from '@chakra-ui/react';
-import { MdCheckCircle, MdBlock, MdAssignment, MdDescription } from 'react-icons/md';
-// --- END NEW IMPORTS ---
+} from "@chakra-ui/react";
 
-const VetDashboard = ({ user, token }) => {
+import { MdCheckCircle, MdBlock, MdAssignment } from "react-icons/md";
+
+const VetDashboard = ({ user }) => {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [acceptedRequests, setAcceptedRequests] = useState([]);
-  const [selectedRequest, setSelectedRequest] = useState(null); 
-  const toast = useToast(); // Use toast for messages
+  const [selectedRequest, setSelectedRequest] = useState(null);
 
-  // --- NEW STATE FOR MODAL ---
-  const { isOpen, onOpen, onClose } = useDisclosure(); // Controls the decline modal
-  const { isOpen: prescOpen, onOpen: openPrescModal, onClose: closePrescModal } = useDisclosure(); // Prescriptions modal
+  const [recentPrescriptions, setRecentPrescriptions] = useState([]);
+  const [loadingRecent, setLoadingRecent] = useState(false);
+
+  const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
   const [currentDeclineId, setCurrentDeclineId] = useState(null);
-  const [declineReason, setDeclineReason] = useState('');
-  // --- END NEW STATE ---
+  const [declineReason, setDeclineReason] = useState("");
 
-  // --- PRESCRIPTIONS STATE ---
-  const [prescriptions, setPrescriptions] = useState([]);
-  const [loadingPrescriptions, setLoadingPrescriptions] = useState(false);
-  // --- END PRESCRIPTIONS STATE ---
-
-  // --- 1. FUNCTION: Get all requests for the dashboard ---
+  // ---------------- Fetch pending + accepted requests ----------------
   const fetchAllRequests = async () => {
     try {
       const [pendingRes, acceptedRes] = await Promise.all([
-        axios.get('/api/requests/pending'),
-        axios.get(`/api/requests/my-accepted/${user.userId}`)
+        axios.get("/api/requests/pending"),
+        axios.get(`/api/requests/my-accepted/${user.userId}`),
       ]);
-      
+
       setPendingRequests(pendingRes.data || []);
       setAcceptedRequests(acceptedRes.data || []);
-      
     } catch (error) {
       toast({
-        title: 'Error fetching requests',
-        description: error.response?.data?.message || error.message,
-        status: 'error',
+        title: "Error fetching requests",
+        description: error.response?.data?.message,
+        status: "error",
         duration: 5000,
         isClosable: true,
       });
@@ -80,152 +71,148 @@ const VetDashboard = ({ user, token }) => {
   };
 
   useEffect(() => {
-    if(user?.userId) {
-      fetchAllRequests();
-      fetchPrescriptions(); // fetch prescriptions at load as well
-    }
-    // eslint-disable-next-line
-  }, [user?.userId]);
-  
-  // --- 2. FUNCTION: Accept a request ---
-  const handleAccept = async (request) => {
+    if (user.userId) fetchAllRequests();
+  }, [user.userId]);
+
+  // ---------------- Fetch Recent Prescriptions ----------------
+  const refreshRecentPrescriptions = async () => {
     try {
-      await axios.post(
-        '/api/requests/accept',
-        { requestId: request._id, vetId: user.userId }
+      setLoadingRecent(true);
+      const token = localStorage.getItem("token");
+
+      const res = await axios.get(
+        "/api/prescription/vet/recent?limit=5",
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast({
-        title: 'Request Accepted',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-      fetchAllRequests(); // Refresh both lists
+
+      // ❗ FIX: backend returns "data", not "prescriptions"
+      setRecentPrescriptions(res.data.prescriptions || []);
     } catch (error) {
+      console.error("Recent prescription error:", error.message);
+      setRecentPrescriptions([]);
+    } finally {
+      setLoadingRecent(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshRecentPrescriptions();
+  }, []);
+
+  // ---------------- Accept Request ----------------
+  const handleAccept = async (req) => {
+    try {
+      await axios.post("/api/requests/accept", {
+        requestId: req._id,
+        vetId: user.userId,
+      });
+
+      toast({ title: "Request Accepted", status: "success", duration: 3000 });
+      fetchAllRequests();
+    } catch (err) {
       toast({
-        title: 'Error accepting request',
-        description: error.response?.data?.message || error.message,
-        status: 'error',
+        title: "Error accepting request",
+        description: err.response?.data?.message,
+        status: "error",
         duration: 5000,
         isClosable: true,
       });
     }
   };
 
-  // --- 3. FUNCTION: Decline a request (now opens modal) ---
-  const openDeclineModal = (requestId) => {
-    setCurrentDeclineId(requestId);
-    setDeclineReason('');
-    onOpen(); // Opens the modal
+  // ---------------- Decline request ----------------
+  const openDeclineModal = (id) => {
+    setCurrentDeclineId(id);
+    setDeclineReason("");
+    onOpen();
   };
 
-  // --- 4. FUNCTION: Submit the decline ---
   const submitDecline = async () => {
     if (!declineReason) {
-      toast({
-        title: 'Reason is required',
-        status: 'warning',
-        duration: 3000,
-        isClosable: true,
-      });
+      toast({ title: "Reason required", status: "warning", duration: 3000 });
       return;
     }
 
     try {
-      await axios.post(
-        '/api/requests/decline',
-        { requestId: currentDeclineId, reason: declineReason }
-      );
-      toast({
-        title: 'Request Declined',
-        status: 'info',
-        duration: 3000,
-        isClosable: true,
+      await axios.post("/api/requests/decline", {
+        requestId: currentDeclineId,
+        reason: declineReason,
       });
-      fetchAllRequests(); // Refresh both lists
-      onClose(); // Close the modal
-    } catch (error) {
+
+      toast({ title: "Request Declined", status: "info", duration: 3000 });
+      fetchAllRequests();
+      onClose();
+    } catch (err) {
       toast({
-        title: 'Error declining request',
-        description: error.response?.data?.message || error.message,
-        status: 'error',
+        title: "Error declining request",
+        description: err.response?.data?.message,
+        status: "error",
         duration: 5000,
         isClosable: true,
       });
     }
   };
 
-  // --- 5. PRESCRIPTIONS: fetch list of prescriptions by this vet ---
-  // tries /api/prescriptions/by-vet/:id and falls back to /api/prescriptions/vet/:id
-  const fetchPrescriptions = async () => {
-    if (!user?.userId) return;
-    setLoadingPrescriptions(true);
-    try {
-      let res;
-      try {
-        res = await axios.get(`/api/prescriptions/by-vet/${user.userId}`);
-      } catch (err) {
-        // fallback
-        res = await axios.get(`/api/prescriptions/vet/${user.userId}`);
-      }
-      setPrescriptions(Array.isArray(res.data) ? res.data : []);
-    } catch (error) {
-      console.error('fetchPrescriptions error', error);
-      setPrescriptions([]);
-      toast({
-        title: 'Could not load prescriptions',
-        description: error.response?.data?.message || error.message,
-        status: 'warning',
-        duration: 4000,
-        isClosable: true,
-      });
-    } finally {
-      setLoadingPrescriptions(false);
-    }
-  };
-
-  // --- 6. RENDER LOGIC ---
-  
-  // If the vet has clicked "Prescribe", show the form
+  // ---------------- If Writing Prescription ----------------
   if (selectedRequest) {
     return (
       <PrescriptionForm
         request={selectedRequest}
         vetId={user.userId}
-        onClose={() => {
-          setSelectedRequest(null); // Close the form
-          fetchAllRequests(); // Refresh all lists
-          fetchPrescriptions(); // refresh prescriptions after writing one
+        onClose={() => setSelectedRequest(null)}
+        onCreated={() => {
+          fetchAllRequests();          // remove from accepted instantly
+          refreshRecentPrescriptions(); // update recent list instantly
         }}
       />
     );
   }
 
-  // Otherwise, show the normal dashboard
+  // ---------------- UI ----------------
   return (
     <VStack spacing={8} align="stretch">
       <Heading size="lg">Veterinarian Dashboard</Heading>
-      
-      {/* --- PENDING REQUESTS LIST --- */}
+
+      {/* Pending Requests */}
       <Card variant="outline">
         <CardHeader>
-          <Heading size="md">Pending Treatment Requests ({pendingRequests.length})</Heading>
+          <Heading size="md">
+            Pending Treatment Requests ({pendingRequests.length})
+          </Heading>
         </CardHeader>
         <CardBody>
-          <Button onClick={fetchAllRequests} mb={4}>Refresh List</Button>
-          
-          {pendingRequests.length > 0 ? (
+          <Button onClick={fetchAllRequests} mb={4}>
+            Refresh List
+          </Button>
+
+          {pendingRequests.length ? (
             <List spacing={4}>
-              {pendingRequests.map(req => (
-                <ListItem key={req._id} borderWidth="1px" borderRadius="md" p={4} boxShadow="sm">
-                  <Heading size="sm">Animal: {req.animalId?.animalTagId} ({req.animalId?.type})</Heading>
-                  <Text>Farmer: {req.farmerId?.name} ({req.farmerId?.phone})</Text>
+              {pendingRequests.map((req) => (
+                <ListItem
+                  key={req._id}
+                  p={4}
+                  borderWidth="1px"
+                  borderRadius="md"
+                >
+                  <Heading size="sm">
+                    Animal: {req.animalId?.animalTagId} ({req.animalId?.type})
+                  </Heading>
+                  <Text>Farmer: {req.farmerId?.name}</Text>
                   <Text>Problem: {req.problemDescription}</Text>
+
                   <HStack mt={4}>
-                    <Button onClick={() => handleAccept(req)} colorScheme="green" leftIcon={<MdCheckCircle />}>
+                    <Button
+                      colorScheme="green"
+                      leftIcon={<MdCheckCircle />}
+                      onClick={() => handleAccept(req)}
+                    >
                       Accept
                     </Button>
-                    <Button onClick={() => openDeclineModal(req._id)} colorScheme="red" leftIcon={<MdBlock />}>
+                    <Button
+                      colorScheme="red"
+                      leftIcon={<MdBlock />}
+                      onClick={() => openDeclineModal(req._id)}
+                    >
                       Decline
                     </Button>
                     <Button onClick={() => setSelectedRequest(req)} colorScheme="blue" leftIcon={<MdAssignment />}>
@@ -238,30 +225,43 @@ const VetDashboard = ({ user, token }) => {
           ) : (
             <Alert status="info">
               <AlertIcon />
-              There are no pending requests.
+              No pending requests.
             </Alert>
           )}
         </CardBody>
       </Card>
-      
-      {/* --- ACCEPTED REQUESTS LIST --- */}
+
+      {/* Accepted Requests */}
       <Card variant="outline">
         <CardHeader>
-          <Heading size="md">My Accepted Cases ({acceptedRequests.length})</Heading>
+          <Heading size="md">
+            My Accepted Cases ({acceptedRequests.length})
+          </Heading>
         </CardHeader>
         <CardBody>
-          {acceptedRequests.length > 0 ? (
+          {acceptedRequests.length ? (
             <List spacing={4}>
-              {acceptedRequests.map(req => (
-                <ListItem key={req._id} borderWidth="1px" borderRadius="md" p={4} boxShadow="sm">
+              {acceptedRequests.map((req) => (
+                <ListItem
+                  key={req._id}
+                  p={4}
+                  borderWidth="1px"
+                  borderRadius="md"
+                >
                   <HStack>
                     <Box>
-                      <Heading size="sm">Animal: {req.animalId?.animalTagId}</Heading>
+                      <Heading size="sm">
+                        Animal: {req.animalId?.animalTagId}
+                      </Heading>
                       <Text>Farmer: {req.farmerId?.name}</Text>
                       <Text>Problem: {req.problemDescription}</Text>
                     </Box>
                     <Spacer />
-                    <Button onClick={() => setSelectedRequest(req)} colorScheme="blue" leftIcon={<MdAssignment />}>
+                    <Button
+                      colorScheme="blue"
+                      leftIcon={<MdAssignment />}
+                      onClick={() => setSelectedRequest(req)}
+                    >
                       Write Prescription
                     </Button>
                   </HStack>
@@ -271,78 +271,48 @@ const VetDashboard = ({ user, token }) => {
           ) : (
             <Alert status="info">
               <AlertIcon />
-              You have no accepted requests.
+              No accepted cases.
             </Alert>
           )}
         </CardBody>
       </Card>
 
-      {/* --- DIVIDER & Prescriptions Card --- */}
-      <Divider />
+      {/* Recent Prescriptions */}
+      <Box mt={10}>
+        <Heading size="md" mb={4}>
+          Recent Prescriptions (Last 5)
+        </Heading>
 
-     
+        {loadingRecent ? (
+          <Text>Loading...</Text>
+        ) : recentPrescriptions.length === 0 ? (
+          <Text color="gray.500">No prescriptions created yet.</Text>
+        ) : (
+          <VStack spacing={3} align="stretch">
+            {recentPrescriptions.map((p) => (
+              <Box
+                key={p._id}
+                p={4}
+                borderWidth="1px"
+                borderRadius="lg"
+                bg="gray.50"
+              >
+                <Text fontWeight="bold">
+                  Animal: {p.animalId?.animalTagId || "Unknown"}
+                </Text>
+                <Text fontSize="sm">
+                  Medicines:{" "}
+                  {p.medicines
+                    .map((m) => `${m.name} (${m.dosage})`)
+                    .join(", ")}
+                </Text>
+              </Box>
+            ))}
+          </VStack>
+        )}
+      </Box>
 
-      {/* --- PRESCRIPTIONS MODAL --- */}
-      <Modal isOpen={prescOpen} onClose={closePrescModal} size="xl">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Prescriptions by {user?.name || 'You'}</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            {loadingPrescriptions ? (
-              <Text>Loading…</Text>
-            ) : prescriptions.length === 0 ? (
-              <Alert status="info"><AlertIcon />No prescriptions found.</Alert>
-            ) : (
-              <VStack spacing={4} align="stretch">
-                {prescriptions.map((p) => (
-                  <Card key={p._id || p.id} borderWidth="1px" borderRadius="md" p={3}>
-                    <HStack justify="space-between" align="start">
-                      <Box>
-                        <HStack>
-                          <Heading size="sm">{p.animal?.animalTagId || p.animalTagId || 'Animal'}</Heading>
-                          <Badge colorScheme="green">{new Date(p.createdAt || p.date || p.timestamp || Date.now()).toLocaleDateString()}</Badge>
-                        </HStack>
-                        <Text fontSize="sm" color="gray.600" mt={2}>{p.notes || p.description || '—'}</Text>
-
-                        {/* Medicines list (safe check) */}
-                        {Array.isArray(p.medicines) && p.medicines.length > 0 && (
-                          <Stack mt={2} spacing={1}>
-                            {p.medicines.map((m, i) => (
-                              <HStack key={i}>
-                                <ListIcon as={MdCheckCircle} />
-                                <Text fontSize="sm">{m.name || m.medicinename || m}</Text>
-                                <Text fontSize="xs" color="gray.500"> — {m.dosage || m.instructions || ''}</Text>
-                              </HStack>
-                            ))}
-                          </Stack>
-                        )}
-                      </Box>
-
-                      <VStack>
-                        {/* If the prescription has an attached image, show a small link or badge */}
-                        {p.photo && <Badge colorScheme="purple">Photo</Badge>}
-                        <Button size="sm" onClick={() => {
-                          // simple view details -> open the PrescriptionForm with data if you want
-                          // For now show toast and close modal and open prescription form for read-only
-                          setSelectedRequest(p.request || p); // attempt to let user view in PrescriptionForm if it supports
-                          closePrescModal();
-                        }}>Open</Button>
-                      </VStack>
-                    </HStack>
-                  </Card>
-                ))}
-              </VStack>
-            )}
-          </ModalBody>
-
-          <ModalFooter>
-            <Button variant="ghost" onClick={closePrescModal}>Close</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      {/* --- DECLINE REASON MODAL --- */}
+      {/* Decline Modal */}
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>
@@ -350,25 +320,23 @@ const VetDashboard = ({ user, token }) => {
           <ModalCloseButton />
           <ModalBody>
             <FormControl isRequired>
-              <FormLabel>Please provide a reason for declining:</FormLabel>
-              <Textarea 
+              <FormLabel>Reason</FormLabel>
+              <Textarea
                 value={declineReason}
                 onChange={(e) => setDeclineReason(e.target.value)}
-                placeholder="e.g., Not in my service area, case requires specialist..."
               />
             </FormControl>
           </ModalBody>
           <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onClose}>
+            <Button variant="ghost" onClick={onClose}>
               Cancel
             </Button>
             <Button colorScheme="red" onClick={submitDecline}>
-              Submit Decline
+              Submit
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
-
     </VStack>
   );
 };

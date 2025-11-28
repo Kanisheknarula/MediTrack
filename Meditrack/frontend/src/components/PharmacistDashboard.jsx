@@ -28,6 +28,10 @@ const PharmacistDashboard = ({ user, token }) => {
   const [selectedPrescription, setSelectedPrescription] = useState(null);
   const toast = useToast(); // Use toast for messages
 
+  const [recentBills, setRecentBills] = useState([]);
+const [loadingRecentBills, setLoadingRecentBills] = useState(false);
+
+
   // --- 1. FUNCTION: Get all new (unbilled) prescriptions ---
   const fetchNewPrescriptions = async () => {
     try {
@@ -49,6 +53,32 @@ const PharmacistDashboard = ({ user, token }) => {
   useEffect(() => {
     fetchNewPrescriptions();
   }, []);
+
+  useEffect(() => {
+  const fetchRecentBills = async () => {
+    try {
+      setLoadingRecentBills(true);
+      const token = localStorage.getItem("token");
+
+      const res = await axios.get("/api/pharmacist/bills/recent?limit=5", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.data.success) {
+        setRecentBills(res.data.bills);
+      }
+    } catch (err) {
+      console.error("Error loading recent bills:", err);
+    } finally {
+      setLoadingRecentBills(false);
+    }
+  };
+
+  fetchRecentBills();
+}, []);
+
 
   // --- 2. RENDER LOGIC ---
 
@@ -113,6 +143,61 @@ const PharmacistDashboard = ({ user, token }) => {
           )}
         </CardBody>
       </Card>
+
+      {/* ================== Recent Bills ================== */}
+<Box mt={10} w="100%">
+  <Heading size="md" mb={4}>
+    Recent Bills (Your last 5)
+  </Heading>
+
+  {loadingRecentBills ? (
+    <Text>Loading...</Text>
+  ) : recentBills.length === 0 ? (
+    <Text color="gray.500">No bills generated yet.</Text>
+  ) : (
+    <VStack align="stretch" spacing={3}>
+      {recentBills.map((bill) => (
+        <Box
+          key={bill._id}
+          p={4}
+          borderWidth="1px"
+          borderRadius="lg"
+          bg="gray.50"
+        >
+          <HStack justify="space-between">
+            <Text fontWeight="bold">
+              Bill #{bill._id.slice(-6)}
+            </Text>
+            <Text fontSize="sm" color="gray.600">
+              {new Date(bill.createdAt).toLocaleString()}
+            </Text>
+          </HStack>
+
+          {bill.prescriptionId?.animalId && (
+            <Text fontSize="sm" mt={1}>
+              Animal:{" "}
+              {bill.prescriptionId.animalId.animalTagId ||
+                bill.prescriptionId.animalId._id}
+            </Text>
+          )}
+
+          {bill.totalAmount != null && (
+            <Text fontSize="sm" mt={1}>
+              Total Amount: ₹{bill.totalAmount}
+            </Text>
+          )}
+
+          {bill.farmerName && (
+            <Text fontSize="sm" mt={1}>
+              Farmer: {bill.farmerName}
+            </Text>
+          )}
+        </Box>
+      ))}
+    </VStack>
+  )}
+</Box>
+
     </VStack>
   );
 };

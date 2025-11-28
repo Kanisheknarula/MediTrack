@@ -95,31 +95,24 @@ export default function Navbar({
                 >
                   MediTrack
                 </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "var(--muted, #6b7280)",
-                  }}
-                >
-                  AMU / MRL Monitoring
-                </div>
+              
               </div>
             </div>
           </div>
 
           {/* Middle: quick info */}
-          <div
+          {/* <div
             className="nav-middle"
-            style={{ display: "flex", alignItems: "center", gap: 12 }}
-          >
-            <div className="nav-pill" title="Your area">
+            style={{ display: "flex", alignItems: "center", gap: 12 }} */}
+          {/* > */}
+            {/* <div className="nav-pill" title="Your area">
               <MapPin size={14} />
               <span style={{ marginLeft: 8, fontSize: 13 }}>Harda, MP</span>
             </div>
             <div className="nav-pill" title="Reports">
               <span style={{ fontSize: 13 }}>AMU (Demo)</span>
             </div>
-          </div>
+          </div> */}
 
           {/* Right: user & actions */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

@@ -1,24 +1,22 @@
 // src/App.jsx
-import React, { useState, useEffect } from 'react';
-import Auth from './components/Auth';
-import FarmerDashboard from './components/FarmerDashboard';
-import VetDashboard from './components/VetDashboard';
-import PharmacistDashboard from './components/PharmacistDashboard';
-import ManagerDashboard from './components/ManagerDashboard';
-import AdminDashboard from './components/AdminDashboard';
-import PublicDashboard from './components/PublicDashboard';
-import RegistrarDashboard from './components/RegistrarDashboard';
-import Navbar from "./components/Navbar";
+import React, { useState, useEffect } from "react";
 
-import './App.css';
+import Navbar from "./components/Navbar";
+import PublicDashboard from "./components/PublicDashboard";
+import Auth from "./components/Auth";
+
+import FarmerDashboard from "./components/FarmerDashboard";
+import VetDashboard from "./components/VetDashboard";
+import PharmacistDashboard from "./components/PharmacistDashboard";
+import ManagerDashboard from "./components/ManagerDashboard";
+import AdminDashboard from "./components/AdminDashboard";
+import RegistrarDashboard from "./components/RegistrarDashboard";
+
+import "./App.css";
 
 function App() {
   const [token, setToken] = useState(null);
-  const [user, setUser] = useState(
-    localStorage.getItem("user")
-      ? JSON.parse(localStorage.getItem("user"))
-      : null
-  );
+  const [user, setUser] = useState(null);
 
   // ---------- THEME STATE ----------
   const [isDark, setIsDark] = useState(() => {
@@ -29,25 +27,30 @@ function App() {
     if (saved === "light") return false;
 
     // fallback to system preference
-    return window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return (
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+    );
   });
 
-  // load token + user from localStorage
+  // ---------- LOAD TOKEN + USER ONCE ----------
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+    const storedToken = localStorage.getItem("token");
+    const storedUser = localStorage.getItem("user");
 
     if (storedToken && storedUser) {
       setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        setUser(null);
+      }
     }
   }, []);
 
-  // apply theme to <html> element
+  // ---------- APPLY THEME ----------
   useEffect(() => {
     const root = document.documentElement;
-
     if (isDark) {
       root.classList.add("dark");
       localStorage.setItem("theme", "dark");
@@ -57,24 +60,46 @@ function App() {
     }
   }, [isDark]);
 
-  const toggleTheme = () => setIsDark(prev => !prev);
+  const toggleTheme = () => setIsDark((prev) => !prev);
 
+  // ---------- LOGIN SUCCESS ----------
   const handleLoginSuccess = (data) => {
-    setToken(data.token);
-    setUser(data.user);
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
+    const { token: newToken, user: newUser } = data;
+
+    setToken(newToken);
+    setUser(newUser);
+
+    localStorage.setItem("token", newToken);
+    localStorage.setItem("user", JSON.stringify(newUser));
+
+    // go to top when logged in
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // ---------- LOGOUT ----------
   const handleLogout = () => {
+    // clear state
+    setToken(null);
     setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+
+    // clear storage
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    // remove #login hash if present
+    if (window.location.hash) {
+      window.location.hash = "";
+    }
+
+    // scroll back to top (public dashboard)
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  const isLoggedIn = Boolean(token && user);
 
   return (
     <div className={isDark ? "App dark" : "App"}>
-      {/* Top navbar */}
+      {/* Top navbar (shows Logout if user exists) */}
       <Navbar
         user={user}
         onLogout={handleLogout}
@@ -82,20 +107,21 @@ function App() {
         isDark={isDark}
       />
 
+      {/* This green header is just a title now (logout removed here) */}
       <header className="App-header">
         <h1>MediTrack - AMU/MRL Monitoring System</h1>
-        {token && (
+        {isLoggedIn && user && (
           <div className="header-user">
             <span>
               Welcome, {user.name}! <b>({user.role})</b>
             </span>
-            <button onClick={handleLogout}>Logout</button>
           </div>
         )}
       </header>
 
       <main>
-        {token ? (
+        {isLoggedIn ? (
+          // ---------- DASHBOARDS WHEN LOGGED IN ----------
           <div className="dashboard-container">
             {user.role === "Farmer" && (
               <FarmerDashboard user={user} token={token} />
@@ -117,14 +143,13 @@ function App() {
             )}
           </div>
         ) : (
+          // ---------- PUBLIC VIEW + LOGIN ----------
           <>
-            {/* Public dashboard on top */}
             <PublicDashboard />
-            {/* Login section for navbar “Login” link */}
             <div
               id="login"
               className="auth-container container"
-              style={{ scrollMarginTop: "90px" }}  // so it doesn’t hide behind navbar
+              style={{ scrollMarginTop: "90px" }}
             >
               <Auth onLoginSuccess={handleLoginSuccess} />
             </div>

@@ -1,9 +1,7 @@
-// frontend/src/components/PublicDashboard.jsx
-import React, { useEffect, useState } from "react";
-import api from "../api/api";            // ✅ correct path
-import { Bar } from "react-chartjs-2";
-import { motion } from "framer-motion";
-import { Search } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { Bar } from 'react-chartjs-2';
+// We need to register Chart.js components to avoid "canvas" errors in modern React
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -12,245 +10,199 @@ import {
   Title,
   Tooltip,
   Legend,
-} from "chart.js";
+} from 'chart.js';
 
+import {
+  Box,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  Center,
+  Heading,
+  Input,
+  Spinner,
+  Text,
+  VStack,
+  Alert,
+  AlertIcon,
+  Container,
+  SimpleGrid,
+  InputGroup,
+  InputLeftElement,
+  Badge,
+  useColorModeValue,
+} from '@chakra-ui/react';
+import { SearchIcon } from '@chakra-ui/icons';
+
+// Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-export default function PublicDashboard() {
-  const [chartData, setChartData] = useState(null);
-  const [loadingChart, setLoadingChart] = useState(true);
-  const [chartError, setChartError] = useState("");
-  const [batchInput, setBatchInput] = useState("");
-  const [batchResult, setBatchResult] = useState(null);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState("");
+const PublicDashboard = () => {
+  const [amuData, setAmuData] = useState(null);
+  const [message, setMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Demo fallback data (if backend is down)
-  // const mockData = [
-  //   { city: "Pune", count: 2 },
-  //   { city: "Bhopal", count: 2 },
-  //   { city: "Harda", count: 1 },
-  //   { city: "Bin", count: 1 },
-  // ];
+  // --- CONFIGURATION ---
+  // 1. UPDATE THIS LINE: Replace this string with the actual endpoint for your NEW database.
+  const NEW_DATABASE_ENDPOINT = '/api/admin/public-amu-report'; 
+  
+  // UI Theme Colors
+  const cardBg = useColorModeValue('white', 'gray.700');
+  const primaryColor = 'teal.500';
+  const secondaryColor = 'teal.50';
+
+  const fetchPublicAmuReport = async () => {
+    setIsLoading(true);
+    setMessage('');
+    try {
+      // 2. We use the NEW_DATABASE_ENDPOINT here to ensure we get new data
+      const response = await axios.get('/api/admin/public-amu-report');
+      const data = response.data;
+
+      // Create Chart Data with enhanced colors
+      const chartData = {
+        labels: data.map((item) => item.city),
+        datasets: [
+          {
+            label: 'Total Prescriptions',
+            data: data.map((item) => item.count),
+            backgroundColor: 'rgba(223, 38, 38, 0.7)', // Teal color
+            borderColor: 'rgba(216, 37, 37, 1)',
+            borderWidth: 1,
+            borderRadius: 4, // Rounded bars
+            hoverBackgroundColor: 'rgba(248, 6, 6, 0.9)',
+          },
+        ],
+      };
+      setAmuData(chartData);
+    } catch (error) {
+      console.error(error);
+      // Fallback message if the new endpoint isn't ready yet
+      setMessage(`Could not connect to new database at ${NEW_DATABASE_ENDPOINT}. Please verify the API path.`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchChart = async () => {
-      setLoadingChart(true);
-      try {
-        const res = await api.get("/api/admin/public-amu-report");
-        const data =
-          Array.isArray(res.data) && res.data.length ? res.data : mockData;
-        setChartData(formatChart(data));
-        setChartError("");
-      } catch (err) {
-        console.warn("Chart fetch failed, using demo data.", err);
-        setChartData(formatChart(mockData, "Total Prescriptions (Demo)"));
-        setChartError("Could not fetch live report — showing demo data.");
-      } finally {
-        setLoadingChart(false);
-      }
-    };
-    fetchChart();
-    // eslint-disable-next-line
+    fetchPublicAmuReport();
   }, []);
 
-  function formatChart(data, label = "Total Prescriptions") {
-    const labels = data.map((d) => d.city);
-    const values = data.map((d) => d.count);
-
-    return {
-      labels,
-      datasets: [
-        {
-          label,
-          data: values,
-          backgroundColor: "rgba(225,29,72,0.9)", // red bars
-          borderColor: "rgba(160,18,45,1)",
-          borderWidth: 1,
-          borderRadius: 10,
-          barPercentage: 0.6,
-        },
-      ],
-    };
-  }
-
+  // Chart Options for better visuals
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        position: "top",
-        labels: { boxWidth: 14, boxHeight: 8, padding: 8 },
-      },
-      tooltip: {
-        callbacks: {
-          label: function (context) {
-            const v = context.parsed.y ?? context.parsed;
-            return ` ${v} AMU`;
-          },
-        },
-      },
+      legend: { position: 'top' },
+      // title: { display: true, text: 'Live Prescriptions Data (New DB)' },
     },
     scales: {
-      x: {
-        ticks: { color: "var(--muted, #6b7280)", font: { size: 14 } },
-        grid: { display: false },
-      },
-      y: {
-        ticks: { color: "var(--muted, #6b7280)", font: { size: 14 } },
-        grid: {
-          color: "rgba(15,23,42,0.06)",
-          borderDash: [3, 3],
-        },
-      },
+      y: { beginAtZero: true, grid: { color: '#f0f0f0' } },
+      x: { grid: { display: false } },
     },
-  };
-
-  const handleSearch = async () => {
-    if (!batchInput.trim()) {
-      setSearchError("Please enter a Batch ID.");
-      return;
-    }
-    setSearchError("");
-    setSearchLoading(true);
-    setBatchResult(null);
-
-    try {
-      const res = await api.get(
-        `/api/product/${encodeURIComponent(batchInput.trim())}`
-      );
-      setBatchResult(res.data || { message: "No details returned." });
-    } catch (err) {
-      console.error("Batch search error:", err);
-      setSearchError("Could not fetch product info. Try again or use demo.");
-    } finally {
-      setSearchLoading(false);
-    }
   };
 
   return (
-    <div className="site-bg">
-      <motion.div
-        className="container max-width-lg"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        {/* Header */}
-        <header className="page-header" style={{ marginBottom: 18 }}>
-          <div>
-            <h1 className="page-title">Area-wise AMU Report</h1>
-            <p className="page-sub">
-              Easy-to-read dashboard for farmers & livestock managers
-            </p>
-          </div>
-          <div className="meta" style={{ textAlign: "right" }}>
-            <div className="meta-item small-muted">
-              Updated: <strong>Demo</strong>
-            </div>
-            <div className="meta-item small-muted">Live</div>
-          </div>
-        </header>
+    <Box minH="100vh" bg="gray.50" py={8}>
+      <Container maxW="container.xl">
+        
+        {/* Dashboard Header */}
+        <VStack spacing={2} mb={8} align="start">
+          <Heading size="lg" color="gray.700"> Public Dashboard</Heading>
+          {/* <Text color="gray.500">Real-time insights from the updated antimicrobial database.</Text> */}
+        </VStack>
 
-        {/* Chart Card (glass) */}
-        <motion.section
-          className="card glass-card chart-card"
-          initial={{ y: 8, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 12,
-            }}
-          >
-            <h2 className="section-title">AMU by Area</h2>
-            <div className="small-muted">Overview</div>
-          </div>
+        <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={6}>
+          
+          {/* --- Section 1: Area-wise AMU Report (Takes up 2/3rds of space) --- */}
+          <Box gridColumn={{ lg: "span 2" }}>
+            <Card variant="elevated" bg={cardBg} shadow="md" h="100%">
+              <CardHeader pb={0} display="flex" justifyContent="space-between" alignItems="center">
+                <Heading size="md" color={primaryColor}>Area-wise AMU Report</Heading>
+                <Badge colorScheme="green">Live Data</Badge>
+              </CardHeader>
+              
+              <CardBody>
+                {message && (
+                  <Alert status="error" mb={4} borderRadius="md">
+                    <AlertIcon />
+                    {message}
+                  </Alert>
+                )}
 
-          {loadingChart ? (
-            <div className="chart-placeholder" style={{ height: 340 }} />
-          ) : (
-            <>
-              {chartError && <div className="notice error">{chartError}</div>}
-              <div className="chart-wrap" style={{ height: 360 }}>
-                <Bar data={chartData} options={chartOptions} />
-              </div>
-            </>
-          )}
-        </motion.section>
-
-        {/* Search Card (glass) */}
-        <motion.section
-          className="card glass-card search-card"
-          initial={{ y: 8, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          style={{ marginTop: 18 }}
-        >
-          <h3 className="section-title">Search Product</h3>
-
-          <div className="search-row" style={{ marginBottom: 12 }}>
-            <input
-              className="big-input"
-              value={batchInput}
-              onChange={(e) => setBatchInput(e.target.value)}
-              placeholder="Enter Batch ID"
-              aria-label="Enter Batch ID"
-            />
-
-            <button
-              className="btn-primary"
-              onClick={handleSearch}
-              disabled={searchLoading}
-              style={{ minWidth: 140 }}
-            >
-              {searchLoading ? (
-                "Searching…"
-              ) : (
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
+                {isLoading ? (
+                  <Center h="300px">
+                    <VStack>
+                      <Spinner size="xl" color={primaryColor} thickness="4px" />
+                      <Text color="gray.500" mt={4}>Fetching new records...</Text>
+                    </VStack>
+                  </Center>
+                ) : amuData ? (
+                  <Box h="350px">
+                    <Bar data={amuData} options={chartOptions} />
+                  </Box>
+                ) : (
+                  <Center h="350px">
+                    <Text color="gray.400">No data found in the new database.</Text>
+                  </Center>
+                )}
+                
+                <Button 
+                  size="sm" 
+                  mt={4} 
+                  variant="ghost" 
+                  colorScheme="teal" 
+                  onClick={fetchPublicAmuReport}
                 >
-                  <Search size={18} />{" "}
-                  <span style={{ fontWeight: 700 }}>Search</span>
-                </span>
-              )}
-            </button>
-          </div>
+                  Refresh Data
+                </Button>
+              </CardBody>
+            </Card>
+          </Box>
 
-          {searchError && <div className="notice error">{searchError}</div>}
+          {/* --- Section 2: Product Information (Takes up 1/3rd of space) --- */}
+          <Box>
+            <Card variant="elevated" bg={cardBg} shadow="md" h="100%">
+              <CardHeader>
+                <Heading size="md" color={primaryColor}>Verify Product</Heading>
+                <Text fontSize="sm" color="gray.500">Check batch </Text>
+              </CardHeader>
+              <CardBody>
+                <VStack spacing={4}>
+                  {/* <Box w="100%" bg={secondaryColor} p={4} borderRadius="md" mb={2}>
+                    {/* <Text fontSize="sm" color="teal.800">
+                      Enter the Batch ID found on the medicine packaging to verify its details against our new registry.
+                    </Text> */}
+                  {/* </Box> */}
 
-          <div className="result-box">
-            {!batchResult ? (
-              <p className="muted">
-                Enter a Batch ID above to view details.
-              </p>
-            ) : typeof batchResult === "object" ? (
-              <div className="result-grid">
-                {Object.entries(batchResult).map(([k, v]) => (
-                  <div key={k} className="result-row">
-                    <div className="result-key">
-                      {k.replace(/_/g, " ")}
-                    </div>
-                    <div className="result-val">{String(v)}</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="muted">{String(batchResult)}</div>
-            )}
-          </div>
-        </motion.section>
-      </motion.div>
-    </div>
+                  <InputGroup size="lg">
+                    <InputLeftElement pointerEvents="none">
+                      <SearchIcon color="gray.300" />
+                    </InputLeftElement>
+                    <Input 
+                      placeholder="e.g. BTC-2024-X99" 
+                      focusBorderColor={primaryColor}
+                    />
+                  </InputGroup>
+
+                  <Button 
+                    colorScheme="teal" 
+                    size="lg" 
+                    width="100%"
+                    shadow="sm"
+                  >
+                    Get Product Info
+                  </Button>
+                </VStack>
+              </CardBody>
+            </Card>
+          </Box>
+
+        </SimpleGrid>
+      </Container>
+    </Box>
   );
-}
+};
 
-
-
-
-
+export default PublicDashboard;
