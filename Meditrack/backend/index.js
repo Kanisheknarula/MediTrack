@@ -1,103 +1,115 @@
-// Import the packages we installed
+// backend/index.js
+// Full server entry (Express) — updated to serve uploads and include a small error handler.
+// Based on your previous index.js (keeps same routes & blockchain init). :contentReference[oaicite:1]{index=1}
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-
-// This line loads the .env file variables (like your DATABASE_URL)
+const path = require('path');
 require('dotenv').config();
 
-// --- 1. Create the Express App ---
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// --- 2. Add "Middleware" ---
+// -----------------------------
+// Middleware: body parsing
+// -----------------------------
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// This is your "guest list"
+// -----------------------------
+// Serve uploaded files
+// -----------------------------
+// Make sure "backend/uploads" exists (you already created it).
+// Now uploaded photos will be served at: http://yourserver/uploads/<filename>
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// -----------------------------
+// CORS config
+// -----------------------------
 const allowedOrigins = [
- // 'https://amumrlmoniteringplatform.netlify.app', // Your live Netlify site
-  'http://localhost:5173'  // Your local dev site
+  'http://localhost:5173',   // local frontend dev
+  // add your production origin(s) here, e.g.:
+  // 'https://amumrlmonitoringplatform.netlify.app'
 ];
 
-// Allows the server to understand JSON data
-app.use(express.json()); 
-
-// --- THIS IS THE FINAL CORS CONFIGURATION ---
 app.use(cors({
   origin: function (origin, callback) {
-    
-    // --- THIS IS THE NEW DEBUGGING LINE ---
-    console.log('--- REQUEST ORIGIN: ---', origin);
+    console.log('--- REQUEST ORIGIN:', origin);
+    // allow non-browser tools (curl, postman) which send no origin
+    if (!origin) return callback(null, true);
 
-    // allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) {
-      console.log('--- ACCESS GRANTED (No Origin) ---');
-      return callback(null, true);
+    if (!allowedOrigins.includes(origin)) {
+      console.log('❌ CORS BLOCKED:', origin);
+      return callback(new Error("CORS Not Allowed"), false);
     }
 
-    if (allowedOrigins.indexOf(origin) === -1) {
-      console.log('--- ACCESS DENIED ---');
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
-    }
-
-    console.log('--- ACCESS GRANTED ---');
+    console.log('✅ CORS ALLOWED:', origin);
     return callback(null, true);
   },
-  credentials: true
+  credentials: true,
 }));
-// --- END OF CORS CONFIGURATION ---
 
+// -----------------------------
+// Routes (keep same structure as your app)
+// -----------------------------
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/animals', require('./routes/animal'));
+app.use('/api/requests', require('./routes/request'));
+app.use('/api/prescription', require('./routes/prescription'));
+app.use('/api/pharmacist', require('./routes/pharmacist'));
+app.use('/api/manager', require('./routes/manager'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/ml', require('./routes/ml'));
+app.use('/api/registrar', require('./routes/registrar'));
+app.use('/api/amu', require('./routes/amuRoutes'));
 
-// --- Connect the Auth Routes ---
-const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes);
+// -----------------------------
+// Blockchain initialization
+// -----------------------------
+try {
+  const { initBlockchain } = require('./blockchain/blockchainService');
+  initBlockchain();
+} catch (err) {
+  console.warn('Blockchain init failed or module missing:', err.message || err);
+}
 
-const animalRoutes = require('./routes/animal');
-app.use('/api/animals', animalRoutes);
+// -----------------------------
+// MongoDB connection
+// -----------------------------
+const mongoUrl = process.env.DATABASE_URL || process.env.MONGODB_URI;
+if (!mongoUrl) {
+  console.error('❌ DATABASE_URL / MONGODB_URI not set in .env');
+  process.exit(1);
+}
 
-const requestRoutes = require('./routes/request');
-app.use('/api/requests', requestRoutes);
+mongoose.connect(mongoUrl, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+  .then(() => console.log("✅ MongoDB Connected!"))
+  .catch(err => console.error("❌ MongoDB Error:", err.message));
 
-const prescriptionRoutes = require('./routes/prescription');
-app.use('/api/prescriptions', prescriptionRoutes);
-
-const pharmacistRoutes = require('./routes/pharmacist');
-app.use('/api/pharmacist', pharmacistRoutes);
-
-const managerRoutes = require('./routes/manager');
-app.use('/api/manager', managerRoutes);
-
-const adminRoutes = require('./routes/admin');
-app.use('/api/admin', adminRoutes);
-
-const mlRoutes = require('./routes/ml');
-app.use('/api/ml', mlRoutes);
-
-
-
-
-// --- ADD THESE NEW LINES ---
-const registrarRoutes = require('./routes/registrar');
-app.use('/api/registrar', registrarRoutes);
-// ---------------------------
-
-
-
-// ... MongoDB Connection ...
-mongoose.connect(process.env.DATABASE_URL)
-  .then(() => {
-    console.log('✅ MongoDB Connected!');
-  })
-  .catch((err) => {
-    console.error('❌ Error connecting to MongoDB:', err.message);
-  });
-
-// ... Test Route ...
+// -----------------------------
+// Root route (quick sanity)
+// -----------------------------
 app.get('/', (req, res) => {
-  res.send('Hello! The MediTrack server is running.');
+  res.send("Hello! The MediTrack backend is running.");
 });
 
-// ... Start the Server ...
+// -----------------------------
+// Basic error handler (JSON)
+// -----------------------------
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err && err.message ? err.message : err);
+  // Multer file-size / type errors may come here - return readable message
+  const status = err.status || 500;
+  res.status(status).json({ message: err.message || 'Server Error' });
+});
+
+// -----------------------------
+// Start server
+// -----------------------------
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });

@@ -90,7 +90,7 @@ const RequestManager = ({ user, token, animals }) => {
           problemDescription: requestForm.problemDescription
         }
       );
-      
+
       toast({
         title: 'Request Submitted!',
         description: response.data.message,
@@ -98,7 +98,7 @@ const RequestManager = ({ user, token, animals }) => {
         duration: 5000,
         isClosable: true,
       });
-      
+
       setRequestForm({ animalId: '', problemDescription: '' }); // Clear form
       fetchMyRequests(); // Refresh the list of requests
 
@@ -112,7 +112,7 @@ const RequestManager = ({ user, token, animals }) => {
       });
     }
   };
-  
+
   // Helper to determine status color
   const getStatusColor = (status) => {
     switch (status) {
@@ -140,10 +140,10 @@ const RequestManager = ({ user, token, animals }) => {
           <VStack spacing={4}>
             <FormControl isRequired>
               <FormLabel>Select Animal</FormLabel>
-              <Select 
-                name="animalId" 
-                value={requestForm.animalId} 
-                onChange={handleFormChange} 
+              <Select
+                name="animalId"
+                value={requestForm.animalId}
+                onChange={handleFormChange}
                 placeholder="-- Please select an animal --"
               >
                 {/* We map over the 'animals' prop to create the dropdown */}
@@ -165,9 +165,18 @@ const RequestManager = ({ user, token, animals }) => {
               />
             </FormControl>
 
-            <Button type="submit" colorScheme="blue" width="full" size="lg">
+            <Button
+              bg="#16A34A"
+              _hover={{ bg: "#15803D" }}
+              color="white"
+              size="lg"
+              borderRadius="12px"
+              type="submit"
+            >
+              
               Submit Request
             </Button>
+
           </VStack>
         </CardBody>
       </Card>
@@ -179,7 +188,7 @@ const RequestManager = ({ user, token, animals }) => {
         </CardHeader>
         <CardBody>
           <Button onClick={fetchMyRequests} mb={4}>Refresh List</Button>
-          
+
           {myRequests.length > 0 ? (
             <Accordion allowToggle>
               {myRequests.map(req => (
@@ -196,7 +205,7 @@ const RequestManager = ({ user, token, animals }) => {
                   </h2>
                   <AccordionPanel pb={4}>
                     <Text><strong>Problem:</strong> {req.problemDescription}</Text>
-                    
+
                     {req.status === 'Declined' && (
                       <Text color="red.600"><strong>Reason:</strong> {req.declineReason}</Text>
                     )}
@@ -215,7 +224,7 @@ const RequestManager = ({ user, token, animals }) => {
                         <Text fontWeight="bold">
                           Withdrawal Period: {req.prescriptionId.withdrawalPeriodDays} days
                         </Text>
-                        
+
                         {req.prescriptionId.billId ? (
                           <Text color="green.600" fontWeight="bold">
                             Bill Total: {req.prescriptionId.billId.totalAmount}

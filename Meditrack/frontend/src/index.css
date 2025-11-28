@@ -164,11 +164,11 @@
   color:white; border:none; font-weight:700; display:flex; gap:8px; align-items:center; justify-content:center; cursor:pointer;
 }
 
-/* small screens tweak */
+/* small screens tweak
 @media (min-width: 900px) {
   .side-menu { display:none; }
   .sideback { display:none; }
-}
+} */
 
 
 /* logout button */
@@ -216,6 +216,8 @@
   --bg-start: #F0F9F6;  /* Top: Light Mint */
   --bg-mid:   #EEF6FF;  /* Middle: Soft Sky Blue */
   --bg-end:   #F8F9FA;  /* Bottom: Soft White */
+
+  
 }
 /* Large, prominent primary CTA */
 .btn-large {
@@ -514,6 +516,113 @@ h1,h2,h3 { font-family: "Poppins", Inter, system-ui, sans-serif; font-weight:600
   .big-input { min-height: 52px; font-size: 16px; }
   .btn-primary { min-height: 48px; font-size: 16px; width: 100%; }
 }
+/* ---------- LAYERING: NAVBAR + SIDEMENU ---------- */
+
+/* Navbar should be above content, but below side-menu */
+.premium-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 40; /* lower than side-menu & overlay */
+}
+
+/* Dark overlay behind the drawer */
+.sideback {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at top left, rgba(15, 118, 110, 0.25), rgba(15, 23, 42, 0.7));
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease-out;
+  z-index: 60; /* above navbar */
+}
+
+.sideback--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Slide-in drawer */
+.side-menu {
+  position: fixed;
+  top: 0;
+  left: -320px; /* off-screen by default */
+  height: 100vh;
+  width: 320px;
+  max-width: 82%;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 22px 50px rgba(15, 23, 42, 0.45);
+  border-radius: 0 24px 24px 0;
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: left 0.25s ease-out;
+  z-index: 70; /* above overlay & navbar */
+}
+
+.side-menu--open {
+  left: 0;
+}
+
+/* Optional: make side links look clean */
+.side-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.side-link {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 8px 6px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #111827;
+  cursor: pointer;
+}
+
+.side-link:hover {
+  background: rgba(148, 163, 184, 0.15);
+}
+
+.side-cta {
+  /* your Call Help button base styles will override this from inline style */
+}
+
+/* Header row of the drawer */
+.side-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.side-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #16a34a, #f97316);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.side-close {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
 
 
 /* responsive tweaks to make layout feel spacious */

@@ -46,6 +46,7 @@ const prescriptionSchema = new mongoose.Schema({
     ref: 'Bill',
     default: null 
   }
+      
 
 }, { timestamps: true });
 

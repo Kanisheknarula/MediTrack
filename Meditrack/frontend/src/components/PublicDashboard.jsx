@@ -1,6 +1,6 @@
 // frontend/src/components/PublicDashboard.jsx
 import React, { useEffect, useState } from "react";
-import api from "../api/api";
+import api from "../api/api";            // ✅ correct path
 import { Bar } from "react-chartjs-2";
 import { motion } from "framer-motion";
 import { Search } from "lucide-react";
@@ -26,19 +26,20 @@ export default function PublicDashboard() {
   const [searchError, setSearchError] = useState("");
 
   // Demo fallback data (if backend is down)
-  const mockData = [
-    { city: "Pune", count: 2 },
-    { city: "Bhopal", count: 2 },
-    { city: "Harda", count: 1 },
-    { city: "Bin", count: 1 },
-  ];
+  // const mockData = [
+  //   { city: "Pune", count: 2 },
+  //   { city: "Bhopal", count: 2 },
+  //   { city: "Harda", count: 1 },
+  //   { city: "Bin", count: 1 },
+  // ];
 
   useEffect(() => {
     const fetchChart = async () => {
       setLoadingChart(true);
       try {
         const res = await api.get("/api/admin/public-amu-report");
-        const data = Array.isArray(res.data) && res.data.length ? res.data : mockData;
+        const data =
+          Array.isArray(res.data) && res.data.length ? res.data : mockData;
         setChartData(formatChart(data));
         setChartError("");
       } catch (err) {
@@ -63,7 +64,7 @@ export default function PublicDashboard() {
         {
           label,
           data: values,
-          backgroundColor: "rgba(225,29,72,0.9)", // red bars (keeps your chosen red)
+          backgroundColor: "rgba(225,29,72,0.9)", // red bars
           borderColor: "rgba(160,18,45,1)",
           borderWidth: 1,
           borderRadius: 10,
@@ -115,7 +116,9 @@ export default function PublicDashboard() {
     setBatchResult(null);
 
     try {
-      const res = await api.get(`/api/product/${encodeURIComponent(batchInput.trim())}`);
+      const res = await api.get(
+        `/api/product/${encodeURIComponent(batchInput.trim())}`
+      );
       setBatchResult(res.data || { message: "No details returned." });
     } catch (err) {
       console.error("Batch search error:", err);
@@ -127,22 +130,41 @@ export default function PublicDashboard() {
 
   return (
     <div className="site-bg">
-      <motion.div className="container max-width-lg" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <motion.div
+        className="container max-width-lg"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
         {/* Header */}
         <header className="page-header" style={{ marginBottom: 18 }}>
           <div>
             <h1 className="page-title">Area-wise AMU Report</h1>
-            <p className="page-sub">Easy-to-read dashboard for farmers & livestock managers</p>
+            <p className="page-sub">
+              Easy-to-read dashboard for farmers & livestock managers
+            </p>
           </div>
           <div className="meta" style={{ textAlign: "right" }}>
-            <div className="meta-item small-muted">Updated: <strong>Demo</strong></div>
+            <div className="meta-item small-muted">
+              Updated: <strong>Demo</strong>
+            </div>
             <div className="meta-item small-muted">Live</div>
           </div>
         </header>
 
         {/* Chart Card (glass) */}
-        <motion.section className="card glass-card chart-card" initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <motion.section
+          className="card glass-card chart-card"
+          initial={{ y: 8, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 12,
+            }}
+          >
             <h2 className="section-title">AMU by Area</h2>
             <div className="small-muted">Overview</div>
           </div>
@@ -160,7 +182,12 @@ export default function PublicDashboard() {
         </motion.section>
 
         {/* Search Card (glass) */}
-        <motion.section className="card glass-card search-card" initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={{ marginTop: 18 }}>
+        <motion.section
+          className="card glass-card search-card"
+          initial={{ y: 8, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          style={{ marginTop: 18 }}
+        >
           <h3 className="section-title">Search Product</h3>
 
           <div className="search-row" style={{ marginBottom: 12 }}>
@@ -178,9 +205,18 @@ export default function PublicDashboard() {
               disabled={searchLoading}
               style={{ minWidth: 140 }}
             >
-              {searchLoading ? "Searching…" : (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-                  <Search size={18} /> <span style={{ fontWeight: 700 }}>Search</span>
+              {searchLoading ? (
+                "Searching…"
+              ) : (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <Search size={18} />{" "}
+                  <span style={{ fontWeight: 700 }}>Search</span>
                 </span>
               )}
             </button>
@@ -190,12 +226,16 @@ export default function PublicDashboard() {
 
           <div className="result-box">
             {!batchResult ? (
-              <p className="muted">Enter a Batch ID above to view details.</p>
+              <p className="muted">
+                Enter a Batch ID above to view details.
+              </p>
             ) : typeof batchResult === "object" ? (
               <div className="result-grid">
                 {Object.entries(batchResult).map(([k, v]) => (
                   <div key={k} className="result-row">
-                    <div className="result-key">{k.replace(/_/g, " ")}</div>
+                    <div className="result-key">
+                      {k.replace(/_/g, " ")}
+                    </div>
                     <div className="result-val">{String(v)}</div>
                   </div>
                 ))}
@@ -204,14 +244,13 @@ export default function PublicDashboard() {
               <div className="muted">{String(batchResult)}</div>
             )}
           </div>
-
-          <div className="footnote small-muted" style={{ marginTop: 12 }}>
-            Tip: if the backend is offline, demo data will be shown for your prototype.
-          </div>
         </motion.section>
       </motion.div>
     </div>
   );
 }
+
+
+
 
 
