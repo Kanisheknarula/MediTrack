@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../api/api';
 
 // 1. Import Chakra components
 import {
@@ -46,7 +46,7 @@ const Auth = ({ onLoginSuccess }) => {
       : formData;
 
     try {
-      const response = await axios.post(endpoint, payload);
+      const response = await api.post(endpoint, payload);
 
       if (isLogin) {
         onLoginSuccess(response.data); // This logs you in
