@@ -19,23 +19,32 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // -----------------------------------
-// CORS Configuration
+// CORS Configuration (FIXED HERE)
 // -----------------------------------
-const allowedOrigins = ["http://localhost:5173"];
+const allowedOrigins = [
+  "http://localhost:5173",                  // Localhost (Development)
+  "https://meditrack-hazel.vercel.app",     // YOUR LIVE VERCEL APP
+  "https://meditrack-frontend.vercel.app"   // (Optional: Future proofing)
+];
 
 app.use(
   cors({
     origin: function (origin, callback) {
       console.log("Incoming Origin:", origin);
+      // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
-      if (!allowedOrigins.includes(origin)) {
+      
+      if (allowedOrigins.indexOf(origin) === -1) {
         console.log("❌ CORS BLOCKED:", origin);
-        return callback(new Error("CORS Not Allowed"), false);
+        var msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+        return callback(new Error(msg), false);
       }
+      
       console.log("✅ CORS ALLOWED:", origin);
       return callback(null, true);
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
   })
 );
 
@@ -56,7 +65,8 @@ app.use("/api/ml", require("./routes/ml"));
 // Blockchain Init
 // -----------------------------------
 try {
- const { initBlockchain } = require("./blockchain/blockchainService");
+  // Only init blockchain if the file exists and env vars are set
+  const { initBlockchain } = require("./blockchain/blockchainService");
   initBlockchain();
 } catch (err) {
   console.warn("⚠ Blockchain init failed:", err.message || err);
@@ -68,10 +78,7 @@ try {
 const mongoUrl = process.env.DATABASE_URL;
 
 mongoose
-  .connect(mongoUrl, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(mongoUrl)
   .then(() => console.log("✅ MongoDB Connected"))
   .catch((err) => console.error("❌ MongoDB Error:", err.message));
 
