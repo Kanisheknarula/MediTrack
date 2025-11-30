@@ -1,8 +1,9 @@
-flask
-flask-cors
-gunicorn
+fastapi
+uvicorn
+python-multipart
 tensorflow
 scikit-learn
 pandas
 numpy
 joblib
+gunicorn
