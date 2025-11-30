@@ -1,50 +1,77 @@
+require("dotenv").config({ path: "../.env" }); // Load env vars from parent folder
 const { ethers } = require("ethers");
-
-// LOAD FULL HARDHAT ARTIFACT
 const artifact = require("./MediTrackAMU-ABI.json");
+const { MediTrackAMU: contractAddress } = require("./contractAddress.json");
 
-// USE artifact.abi ONLY
 const ABI = artifact.abi;
 
-// LOAD ADDRESS
-const { MediTrackAMU: contractAddress } = require("./contractAddress.json");
-let provider;
 let wallet;
 let contract;
 
 async function initBlockchain() {
   try {
-    // 1) Connect to local Hardhat node
-    // Fix (V5 syntax)
-const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL || "http://127.0.0.1:8545");
+    console.log("⛓ Initializing Blockchain...");
 
-    // 2) Use Hardhat Account #0 PRIVATE KEY (not address!)
-    const privateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80".trim();
+    // 1. Get the RPC URL (Sepolia or Local)
+    const rpcUrl = process.env.RPC_URL || process.env.SEPOLIA_RPC_URL;
+    if (!rpcUrl) {
+      throw new Error("RPC_URL is missing in .env file");
+    }
 
+    // 2. Setup Provider (Handles both Ethers V5 and V6)
+    let provider;
+    if (ethers.JsonRpcProvider) {
+      // Ethers V6 syntax
+      provider = new ethers.JsonRpcProvider(rpcUrl);
+    } else {
+      // Ethers V5 syntax
+      provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+    }
+
+    // 3. Setup Wallet (Uses your REAL Private Key)
+    const privateKey = process.env.PRIVATE_KEY;
+    if (!privateKey) {
+      throw new Error("PRIVATE_KEY is missing in .env file");
+    }
     wallet = new ethers.Wallet(privateKey, provider);
 
-    // 3) Connect contract with signer
+    // 4. Connect to Contract
     contract = new ethers.Contract(contractAddress, ABI, wallet);
 
-    console.log("✅ Blockchain Connected Successfully!");
+    console.log(`✅ Blockchain Connected! (Contract: ${contractAddress})`);
   } catch (err) {
-    console.error("❌ Error initializing blockchain:", err);
+    console.error("❌ Blockchain Init Error:", err.message);
   }
 }
 
+// WRITE FUNCTION
 async function addEvent(actionType, animalId, recordHash) {
-  // 1. Convert the string to bytes32 (keccak256 of utf8 string)
-  //    This matches the Solidity `bytes32 recordHash` type
-  const hashBytes32 = ethers.id(recordHash);           // same as keccak256(toUtf8Bytes(recordHash))
+  try {
+    if (!contract) await initBlockchain();
 
-  // 2. Call the contract with bytes32 value
-  const tx = await contract.addEvent(actionType, animalId, hashBytes32);
+    console.log(`📝 Writing to Blockchain: ${actionType} for ${animalId}`);
 
-  // 3. Wait for transaction to be mined
-  const receipt = await tx.wait();
+    // Create Hash (Handles both V5 and V6)
+    let hashBytes32;
+    if (ethers.id) {
+        hashBytes32 = ethers.id(recordHash); // V6
+    } else {
+        hashBytes32 = ethers.utils.id(recordHash); // V5
+    }
 
-  // 4. Return transaction hash
-  return receipt.hash;
+    // Send Transaction
+    const tx = await contract.addEvent(actionType, animalId, hashBytes32);
+    console.log("🔗 TX Sent:", tx.hash);
+
+    // Wait for confirmation
+    const receipt = await tx.wait();
+    console.log("✨ TX Confirmed in Block:", receipt.blockNumber);
+    
+    return receipt.hash;
+  } catch (err) {
+    console.error("❌ addEvent Error:", err.message || err);
+    return null;
+  }
 }
 
 module.exports = { initBlockchain, addEvent };

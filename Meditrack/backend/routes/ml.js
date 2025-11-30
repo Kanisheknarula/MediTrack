@@ -1,24 +1,42 @@
 const express = require("express");
-const fetch = require("node-fetch");
 const router = express.Router();
+const AMU = require("../models/amuModel");
 
-// ML API endpoint
-router.post("/check-mrl", async (req, res) => {
-    try {
-        const input = req.body;
+// ------------------------------
+// PUBLIC: SAME DATA AS ADMIN
+// ------------------------------
 
-        const response = await fetch("http://localhost:8001/predict_mrl", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(input)
-        });
+// Public → AMU by city (for graph)
+router.get("/amu_by_city", async (req, res) => {
+  try {
+    const docs = await AMU.find({});
+    const cities = docs.map(d => d.area);
+    const quantities = docs.map(d => d.total_prescriptions);
+    return res.json({ cities, quantities });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "server error" });
+  }
+});
 
-        const data = await response.json();
-        res.json(data);
+// Public → Daily trend for a selected area
+router.post("/area_amu_report", async (req, res) => {
+  try {
+    const { area } = req.body;
+    const doc = await AMU.findOne({ area: area.toLowerCase() });
 
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+    if (!doc) return res.status(404).json({ error: "Area not found" });
+
+    return res.json({
+      daily_trend: doc.daily_trend,
+      mean_quantity: doc.mean_quantity,
+      std_quantity: doc.std_quantity,
+      total_records: doc.total_prescriptions,
+      anomalies: doc.anomalies || []
+    });
+  } catch (error) {
+    res.status(500).json({ error: "server error" });
+  }
 });
 
 module.exports = router;
