@@ -1,560 +1,274 @@
-// src/components/AdminDashboard.jsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Bar, Radar } from "react-chartjs-2";
+import {
+  Box,
+  Flex,
+  Heading,
+  Text,
+  Select,
+  Button,
+  Stat,
+  StatLabel,
+  StatNumber,
+  HStack,
+  Spinner,
+  Divider,
+  VStack
+} from "@chakra-ui/react";
+
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   BarElement,
-  Title,
-  Tooltip as ChartTooltip,
-  Legend,
-  RadialLinearScale,
   PointElement,
   LineElement,
-  Filler,
+  Tooltip,
+  Legend
 } from "chart.js";
+
+import { Bar, Line } from "react-chartjs-2";
+import jsPDF from "jspdf";
 
 ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
-  Title,
-  ChartTooltip,
-  Legend,
-  RadialLinearScale,
   PointElement,
   LineElement,
-  Filler
+  Tooltip,
+  Legend
 );
 
-import {
-  Box,
-  Heading,
-  Text,
-  VStack,
-  HStack,
-  Button,
-  SimpleGrid,
-  Card,
-  CardHeader,
-  CardBody,
-  Stat,
-  StatLabel,
-  StatNumber,
-  StatHelpText,
-  Spinner,
-  List,
-  ListItem,
-  ListIcon,
-  Center,
-  Select,
-  useToast,
-  Divider,
-  Tooltip,
-  IconButton,
-} from "@chakra-ui/react";
-import { MdLocationCity, MdPerson, MdRefresh, MdFileDownload, MdAssignment } from "react-icons/md";
+// VITE FIX
+const ML_BASE = import.meta.env.VITE_ML_BASE || "http://localhost:8001";
 
-/**
- * AdminDashboard — improved UI/UX with 'Generate Report' option
- *
- * - Generates a downloadable JSON report containing:
- *   - cityData (AMU)
- *   - medicine usage
- *   - professionals for selected city (if loaded)
- *   - totals and timestamp
- *
- * - Chart colors are red per request.
- */
+export default function AdminDashboard() {
+  const [areas, setAreas] = useState([]);
+  const [selectedArea, setSelectedArea] = useState("");
+  const [cityData, setCityData] = useState(null);
+  const [trendData, setTrendData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-export default function AdminDashboard({ user }) {
-  const toast = useToast();
-
-  // UI state
-  const [activeTab, setActiveTab] = useState("dashboard");
-  const PRIMARY = "#0EA5A4";
-  const PRIMARY_HOVER = "#0b938f";
-
-  // data state
-  const [amuData, setAmuData] = useState(null); // chart-ready object
-  const [cityData, setCityData] = useState([]); // raw city list
-  const [medicineData, setMedicineData] = useState(null); // radar chart-ready object
-  const [professionals, setProfessionals] = useState([]);
-  const [selectedCity, setSelectedCity] = useState("");
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [isLoadingProfessionals, setIsLoadingProfessionals] = useState(false);
-
-  // summary stats
-  const [totalPrescriptions, setTotalPrescriptions] = useState(null);
-  const [totalProfessionals, setTotalProfessionals] = useState(null);
-
-  // --- Fetchers ---
-  const fetchAmuByCity = async () => {
-    setLoading(true);
-    setMessage("");
-    try {
-      const res = await axios.get("/api/admin/amu-by-city");
-      const data = res.data || [];
-
-      const total = data.reduce((s, it) => s + (it.count || 0), 0);
-      setTotalPrescriptions(total);
-      setCityData(data);
-
-      // RED bar chart dataset
-      const chartData = {
-        labels: data.map((d) => d.city),
-        datasets: [
-          {
-            label: "Total Prescriptions",
-            data: data.map((d) => d.count),
-            backgroundColor: data.map(() => "rgba(255, 99, 132, 0.85)"),
-            hoverBackgroundColor: data.map(() => "rgba(255, 40, 82, 0.95)"),
-          },
-        ],
-      };
-      setAmuData(chartData);
-    } catch (err) {
-      console.error("fetchAmuByCity:", err);
-      setMessage("Could not fetch AMU stats.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchMedicineUsage = async () => {
-    try {
-      const res = await axios.get("/api/admin/medicine-usage");
-      const data = res.data || [];
-      // RED radar chart
-      const chartData = {
-        labels: data.map((d) => d.medicine),
-        datasets: [
-          {
-            label: "Usage Count",
-            data: data.map((d) => d.count),
-            backgroundColor: "rgba(255, 70, 70, 0.25)",
-            borderColor: "rgba(255, 0, 0, 1)",
-            pointBackgroundColor: "rgba(255, 0, 0, 0.9)",
-            pointBorderColor: "#fff",
-            pointHoverBorderColor: "rgba(255, 0, 0, 1)",
-            fill: true,
-          },
-        ],
-      };
-      setMedicineData(chartData);
-    } catch (err) {
-      console.error("fetchMedicineUsage:", err);
-    }
-  };
-
-  const fetchProfessionalsCount = async () => {
-    try {
-      const res = await axios.get("/api/admin/professionals/count");
-      setTotalProfessionals(res.data?.count ?? null);
-    } catch (err) {
-      // optional endpoint
-      // console.warn(err);
-    }
-  };
-
+  // LOAD AREAS
   useEffect(() => {
-    fetchAmuByCity();
-    fetchMedicineUsage();
-    fetchProfessionalsCount();
-    // eslint-disable-next-line
+    loadAreas();
   }, []);
 
-  // fetch professionals for a city
-  const handleCityClick = async (cityName) => {
-    setMessage("");
-    setSelectedCity(cityName);
-    setProfessionals([]);
-    setIsLoadingProfessionals(true);
+  async function loadAreas() {
     try {
-      const res = await axios.get(`/api/admin/professionals-by-city/${encodeURIComponent(cityName)}`);
-      setProfessionals(Array.isArray(res.data) ? res.data : []);
+      const res = await axios.get(`${ML_BASE}/list_areas`);
+      setAreas(res.data);
+
+      if (res.data.length > 0) {
+        setSelectedArea(res.data[0]);
+        loadTrend(res.data[0]);
+        loadCityData();
+      }
+
+      setLoading(false);
     } catch (err) {
-      console.error("handleCityClick:", err);
-      setMessage("Could not fetch professionals for this city.");
-      toast({ title: "Error", description: "Could not fetch professionals for this city.", status: "error" });
-    } finally {
-      setIsLoadingProfessionals(false);
+      console.log("AREA ERROR", err);
+      setLoading(false);
     }
-  };
+  }
 
-  // export cities CSV (keeps existing)
-  const handleExportCitiesCSV = () => {
-    if (!cityData || !cityData.length) {
-      toast({ title: "Nothing to export", status: "info" });
-      return;
-    }
-    const rows = [["City", "PrescriptionCount"], ...cityData.map((r) => [r.city, r.count])];
-    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `amu_by_city_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast({ title: "Exported", description: "CSV downloaded", status: "success" });
-  };
-
-  // --- NEW: Generate Report (JSON) ---
-  const handleGenerateReport = () => {
+  // LOAD CITY DATA
+  async function loadCityData() {
     try {
-      const report = {
-        generatedAt: new Date().toISOString(),
-        generatedBy: { id: user?._id || user?.id || "unknown", name: user?.name || "Admin" },
-        totals: {
-          totalPrescriptions: totalPrescriptions ?? 0,
-          totalProfessionals: totalProfessionals ?? 0,
-          cityCount: cityData.length,
-          medicinesCount: medicineData?.labels?.length ?? 0,
-        },
-        cityData: cityData, // raw AMU per city
-        medicineUsage: {
-          labels: medicineData?.labels || [],
-          datasets: medicineData?.datasets || [],
-        },
-        professionalsForSelectedCity: {
-          city: selectedCity || null,
-          professionals: professionals,
-        },
-      };
-
-      const content = JSON.stringify(report, null, 2);
-      const blob = new Blob([content], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const date = new Date().toISOString().slice(0, 10);
-      a.href = url;
-      a.download = `meditrack_report_${date}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast({ title: "Report generated", description: `Report downloaded (meditrack_report_${date}.json)`, status: "success" });
+      const res = await axios.get(`${ML_BASE}/amu_by_city`);
+      setCityData(res.data);
     } catch (err) {
-      console.error("generateReport:", err);
-      toast({ title: "Failed", description: "Could not generate report.", status: "error" });
+      console.log("CITY ERROR", err);
     }
-  };
+  }
 
-  // helper computed lists
-  const sortedCityData = useMemo(() => {
-    return [...cityData].sort((a, b) => (b.count || 0) - (a.count || 0));
-  }, [cityData]);
-
-  const topCities = sortedCityData.slice(0, 5);
-  const lowCities = [...sortedCityData].reverse().slice(0, 5);
-
-  // Render content by tab
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case "dashboard":
-        return (
-          <VStack spacing={6} align="stretch">
-            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-              <Card>
-                <CardHeader>
-                  <Stat>
-                    <StatLabel fontSize="sm">Total Prescriptions</StatLabel>
-                    <StatNumber fontSize="2xl">{totalPrescriptions ?? <Spinner size="sm" />}</StatNumber>
-                    <StatHelpText>Area-wise aggregated</StatHelpText>
-                  </Stat>
-                </CardHeader>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <Stat>
-                    <StatLabel fontSize="sm">Registered Professionals</StatLabel>
-                    <StatNumber fontSize="2xl">{totalProfessionals ?? "—"}</StatNumber>
-                    <StatHelpText>Doctors, Vets & Pharmacists</StatHelpText>
-                  </Stat>
-                </CardHeader>
-              </Card>
-
-              <Card>
-                <CardHeader display="flex" justifyContent="space-between" alignItems="center">
-                  <Heading size="sm">Actions</Heading>
-                  <HStack spacing={2}>
-                    <Tooltip label="Refresh all data">
-                      <IconButton
-                        aria-label="Refresh"
-                        icon={<MdRefresh />}
-                        size="sm"
-                        onClick={() => {
-                          fetchAmuByCity();
-                          fetchMedicineUsage();
-                          fetchProfessionalsCount();
-                          toast({ title: "Refreshing", status: "info", duration: 1000 });
-                        }}
-                      />
-                    </Tooltip>
-
-                    <Tooltip label="Export city CSV">
-                      <IconButton aria-label="Export CSV" icon={<MdFileDownload />} size="sm" onClick={handleExportCitiesCSV} />
-                    </Tooltip>
-
-                    <Tooltip label="Generate full JSON report">
-                      <IconButton aria-label="Generate Report" icon={<MdAssignment />} size="sm" onClick={handleGenerateReport} />
-                    </Tooltip>
-                  </HStack>
-                </CardHeader>
-                <CardBody>
-                  <Text fontSize="sm" color="gray.600">Quick actions and exports for admins. Use the city list to view professionals.</Text>
-
-                  <HStack mt={3} spacing={3}>
-                    <Button leftIcon={<MdAssignment />} size="sm" onClick={handleGenerateReport}>
-                      Generate Report
-                    </Button>
-
-                    <Button size="sm" onClick={handleExportCitiesCSV}>
-                      Export Cities CSV
-                    </Button>
-
-                    <Button size="sm" onClick={() => { fetchAmuByCity(); toast({ title: "Refreshed", status: "success" }); }}>
-                      Refresh Data
-                    </Button>
-                  </HStack>
-                </CardBody>
-              </Card>
-            </SimpleGrid>
-
-            <Card>
-              <CardHeader>
-                <Heading size="md">Area-wise AMU (Total Prescriptions)</Heading>
-              </CardHeader>
-              <CardBody>
-                {amuData ? (
-                  <Box style={{ height: 360 }}>
-                    <Bar data={amuData} options={{ maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }} />
-                  </Box>
-                ) : (
-                  <Center p={6}>
-                    <Spinner />
-                    <Text ml={3}>Loading chart...</Text>
-                  </Center>
-                )}
-              </CardBody>
-            </Card>
-          </VStack>
-        );
-
-      case "high-usage":
-        return (
-          <HStack align="start" spacing={6} alignItems="flex-start">
-            <Card flex="1">
-              <CardHeader>
-                <Heading size="md">Top AMU Cities</Heading>
-              </CardHeader>
-              <CardBody>
-                <Text fontSize="sm" color="gray.600" mb={3}>
-                  Click a city to see registered professionals.
-                </Text>
-
-                <List spacing={3}>
-                  {topCities.length ? (
-                    topCities.map((c) => (
-                      <ListItem
-                        key={c.city}
-                        onClick={() => handleCityClick(c.city)}
-                        style={{
-                          cursor: "pointer",
-                          padding: 12,
-                          borderRadius: 8,
-                          background: selectedCity === c.city ? "rgba(255, 99, 132, 0.06)" : "transparent",
-                        }}
-                      >
-                        <HStack justify="space-between">
-                          <HStack>
-                            <ListIcon as={MdLocationCity} color="gray.500" />
-                            <Text fontWeight="semibold">{c.city}</Text>
-                          </HStack>
-                          <Text color="gray.600">Count: {c.count}</Text>
-                        </HStack>
-                      </ListItem>
-                    ))
-                  ) : (
-                    <Text>No data</Text>
-                  )}
-                </List>
-              </CardBody>
-            </Card>
-
-            <Card flex="1">
-              <CardHeader>
-                <Heading size="md">Professionals in {selectedCity || "..."}</Heading>
-              </CardHeader>
-              <CardBody>
-                {isLoadingProfessionals ? (
-                  <Center p={6}>
-                    <Spinner />
-                  </Center>
-                ) : professionals.length ? (
-                  <List spacing={3}>
-                    {professionals.map((p) => (
-                      <ListItem key={p._id}>
-                        <ListIcon as={MdPerson} color="blue.500" />
-                        <Text as="span" fontWeight="semibold">{p.name}</Text> <Text as="span" color="gray.600">({p.role})</Text>
-                      </ListItem>
-                    ))}
-                  </List>
-                ) : (
-                  <Text color="gray.600">No professionals found (select a city).</Text>
-                )}
-              </CardBody>
-            </Card>
-          </HStack>
-        );
-
-      case "low-usage":
-        return (
-          <HStack align="start" spacing={6}>
-            <Card flex="1">
-              <CardHeader>
-                <Heading size="md">Low AMU Cities (Opportunity)</Heading>
-              </CardHeader>
-              <CardBody>
-                <List spacing={3}>
-                  {lowCities.length ? (
-                    lowCities.map((c) => (
-                      <ListItem
-                        key={c.city}
-                        onClick={() => handleCityClick(c.city)}
-                        style={{
-                          cursor: "pointer",
-                          padding: 12,
-                          borderRadius: 8,
-                          background: selectedCity === c.city ? "rgba(255, 99, 132, 0.04)" : "transparent",
-                        }}
-                      >
-                        <HStack justify="space-between">
-                          <HStack>
-                            <ListIcon as={MdLocationCity} color="gray.500" />
-                            <Text fontWeight="semibold">{c.city}</Text>
-                          </HStack>
-                          <Text color="gray.600">Count: {c.count}</Text>
-                        </HStack>
-                      </ListItem>
-                    ))
-                  ) : (
-                    <Text color="gray.600">No data</Text>
-                  )}
-                </List>
-              </CardBody>
-            </Card>
-
-            <Card flex="1">
-              <CardHeader>
-                <Heading size="md">Professionals</Heading>
-              </CardHeader>
-              <CardBody>
-                {isLoadingProfessionals ? (
-                  <Center p={6}><Spinner /></Center>
-                ) : professionals.length ? (
-                  <List spacing={3}>
-                    {professionals.map((p) => (
-                      <ListItem key={p._id}>
-                        <ListIcon as={MdPerson} color="blue.500" />
-                        <Text as="span" fontWeight="semibold">{p.name}</Text> <Text as="span" color="gray.600">({p.role})</Text>
-                      </ListItem>
-                    ))}
-                  </List>
-                ) : (
-                  <Text color="gray.600">No professionals found (select a city)</Text>
-                )}
-              </CardBody>
-            </Card>
-          </HStack>
-        );
-
-      case "compare":
-        return (
-          <VStack spacing={6} align="stretch">
-            <Card>
-              <CardHeader>
-                <Heading size="md">Medicine Usage Comparison</Heading>
-              </CardHeader>
-              <CardBody>
-                {medicineData ? (
-                  <Box style={{ height: 360 }}>
-                    <Radar data={medicineData} options={{ maintainAspectRatio: false }} />
-                  </Box>
-                ) : (
-                  <Center p={6}><Spinner /> <Text ml={3}>Loading medicine data...</Text></Center>
-                )}
-              </CardBody>
-            </Card>
-            <Card>
-              <CardHeader>
-                <Heading size="md">Notes</Heading>
-              </CardHeader>
-              <CardBody>
-                <Text fontSize="sm" color="gray.600">
-                  Use this comparison to identify medicines with unusually high usage. Consider targeted training or audit in those areas.
-                </Text>
-              </CardBody>
-            </Card>
-          </VStack>
-        );
-
-      default:
-        return null;
+  // LOAD DAILY TREND
+  async function loadTrend(area) {
+    try {
+      const res = await axios.post(`${ML_BASE}/area_amu_report`, { area });
+      setTrendData(res.data);
+    } catch (err) {
+      console.log("TREND ERROR", err);
     }
-  };
+  }
+
+  // AI PDF GENERATOR
+  function generatePDF() {
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.text("AMU/MRL AI Insights Report", 10, 10);
+
+    doc.setFontSize(12);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 10, 20);
+    doc.text(`Area: ${selectedArea.toUpperCase()}`, 10, 30);
+
+    // CITY SUMMARY
+    if (cityData) {
+      doc.setFontSize(14);
+      doc.text("City-wise AMU Summary", 10, 45);
+
+      doc.setFontSize(12);
+      cityData.cities.forEach((city, i) => {
+        doc.text(`${city.toUpperCase()}: ${cityData.quantities[i]}`, 12, 55 + i * 7);
+      });
+    }
+
+    // TREND SUMMARY
+    if (trendData) {
+      doc.setFontSize(14);
+      doc.text("Trend Summary", 10, 95);
+
+      doc.setFontSize(12);
+
+      doc.text(`Total Records: ${trendData.total_records}`, 12, 105);
+      doc.text(`Mean Usage: ${trendData.mean_quantity}`, 12, 115);
+      doc.text(`Std Dev: ${trendData.std_quantity}`, 12, 125);
+
+      let maxValue = Math.max(...trendData.daily_trend.quantities);
+      let maxIndex = trendData.daily_trend.quantities.indexOf(maxValue);
+      let peakDay = trendData.daily_trend.dates[maxIndex];
+
+      doc.text(`Peak Usage Day: ${peakDay}`, 12, 135);
+    }
+
+    // MONTHLY SUMMARY (AUTO)
+    doc.setFontSize(14);
+    doc.text("Monthly Summary (Auto Estimated)", 10, 155);
+
+    doc.setFontSize(12);
+    doc.text(
+      `Month: ${new Date().toLocaleString("default", { month: "long" })}`,
+      12,
+      165
+    );
+    doc.text(`Estimated Monthly Mean: ${trendData?.mean_quantity}`, 12, 175);
+    doc.text(`Estimated Monthly Std Dev: ${trendData?.std_quantity}`, 12, 185);
+
+    // DOWNLOAD
+    doc.save(`AI_Insights_${selectedArea}.pdf`);
+  }
+
+  if (loading) {
+    return (
+      <Flex h="100vh" justify="center" align="center">
+        <Spinner size="xl" />
+      </Flex>
+    );
+  }
 
   return (
-    <VStack spacing={6} align="stretch" p={6}>
-      <HStack justify="space-between">
-        <Heading size="lg">MediTrack — Admin Dashboard</Heading>
-        <HStack spacing={3}>
-          <Text color="gray.600" fontSize="sm">Welcome, {user?.name || "Admin"}</Text>
-          <Button size="sm" bg={PRIMARY} _hover={{ bg: PRIMARY_HOVER }} color="white" onClick={() => { fetchAmuByCity(); toast({ title: "Refreshed", status: "success" }); }}>
-            Refresh
-          </Button>
+    <Box p={6}>
+      <Heading size="lg" mb={4}>
+        Admin Dashboard
+      </Heading>
 
-          <Tooltip label="Generate full JSON report">
-            <IconButton aria-label="Generate Report" icon={<MdAssignment />} size="sm" onClick={handleGenerateReport} />
-          </Tooltip>
-        </HStack>
-      </HStack>
-
-      <Divider />
-
-      <HStack spacing={3} align="center">
-        <Button variant={activeTab === "dashboard" ? "solid" : "ghost"} onClick={() => setActiveTab("dashboard")} bg={activeTab === "dashboard" ? PRIMARY : undefined} color={activeTab === "dashboard" ? "white" : undefined}>
-          AMU Dashboard
-        </Button>
-        <Button variant={activeTab === "high-usage" ? "solid" : "ghost"} onClick={() => setActiveTab("high-usage")} bg={activeTab === "high-usage" ? PRIMARY : undefined} color={activeTab === "high-usage" ? "white" : undefined}>
-          High AMU Areas
-        </Button>
-        <Button variant={activeTab === "low-usage" ? "solid" : "ghost"} onClick={() => setActiveTab("low-usage")} bg={activeTab === "low-usage" ? PRIMARY : undefined} color={activeTab === "low-usage" ? "white" : undefined}>
-          Low AMU Areas
-        </Button>
-        <Button variant={activeTab === "compare" ? "solid" : "ghost"} onClick={() => setActiveTab("compare")} bg={activeTab === "compare" ? PRIMARY : undefined} color={activeTab === "compare" ? "white" : undefined}>
-          Compare Medicines
-        </Button>
-
-        <Box marginLeft="auto" display="flex" alignItems="center" gap={3}>
-          <Select size="sm" placeholder="Jump to city" onChange={(e) => handleCityClick(e.target.value)} width="220px">
-            {cityData.map((c) => <option key={c.city} value={c.city}>{c.city} ({c.count})</option>)}
-          </Select>
-
-          <Button size="sm" onClick={handleExportCitiesCSV} leftIcon={<MdFileDownload />}>Export Cities</Button>
-        </Box>
-      </HStack>
-
-      {message && <Text color="red.600">{message}</Text>}
-
-      <Box>
-        {renderTabContent()}
+      {/* AREA SELECT */}
+      <Box mb={4} maxW="300px">
+        <Text>Select Area</Text>
+        <Select
+          value={selectedArea}
+          onChange={(e) => {
+            setSelectedArea(e.target.value);
+            loadTrend(e.target.value);
+          }}
+        >
+          {areas.map((a) => (
+            <option key={a} value={a}>
+              {a.toUpperCase()}
+            </option>
+          ))}
+        </Select>
       </Box>
-    </VStack>
+
+      <Divider my={4} />
+
+      {/* STATS */}
+      {trendData && (
+        <Flex gap={4} mb={6}>
+          <StatBox label="Total Records" value={trendData.total_records} />
+          <StatBox label="Mean Usage" value={trendData.mean_quantity} />
+          <StatBox label="Std Dev" value={trendData.std_quantity} />
+        </Flex>
+      )}
+
+      <Divider my={4} />
+
+      {/* CITY BAR CHART */}
+      <Box mb={8}>
+        <Heading size="md" mb={2}>
+          AMU by City
+        </Heading>
+
+        {cityData ? (
+          <Bar
+            data={{
+              labels: cityData.cities,
+              datasets: [
+                {
+                  label: "AMU",
+                  data: cityData.quantities,
+                  backgroundColor: "rgba(255,0,0,0.4)", // RED
+                  borderColor: "red",
+                  borderWidth: 2
+                }
+              ]
+            }}
+          />
+        ) : (
+          <Text>No data</Text>
+        )}
+      </Box>
+
+      <Divider my={4} />
+
+      {/* DAILY TREND */}
+      <Box>
+        <Heading size="md" mb={2}>
+          Daily Trend ({selectedArea})
+        </Heading>
+
+        {trendData ? (
+          <Line
+            data={{
+              labels: trendData.daily_trend.dates,
+              datasets: [
+                {
+                  label: "Quantity",
+                  data: trendData.daily_trend.quantities,
+                  borderColor: "red",
+                  backgroundColor: "rgba(255,0,0,0.3)",
+                  borderWidth: 2
+                }
+              ]
+            }}
+          />
+        ) : (
+          <Text>No trend data</Text>
+        )}
+      </Box>
+
+      <Divider my={4} />
+
+      {/* AI PDF BUTTON */}
+      <Box mt={6}>
+        <Button colorScheme="purple" onClick={generatePDF}>
+          Download AI Insights Report
+        </Button>
+      </Box>
+    </Box>
   );
 }
 
-
+// STAT CARD
+function StatBox({ label, value }) {
+  return (
+    <Box p={4} borderWidth="1px" borderRadius="md" minW="150px">
+      <Stat>
+        <StatLabel>{label}</StatLabel>
+        <StatNumber>{value ?? "-"}</StatNumber>
+      </Stat>
+    </Box>
+  );
+}
