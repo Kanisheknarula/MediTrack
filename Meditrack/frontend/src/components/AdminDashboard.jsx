@@ -57,7 +57,7 @@ export default function AdminDashboard() {
 
   async function loadAreas() {
     try {
-      const res = await api.get(`${ML_BASE}/list_areas`);
+      const res = await api.get("/api/ml/list_areas");
       setAreas(res.data);
 
       if (res.data.length > 0) {
@@ -76,7 +76,7 @@ export default function AdminDashboard() {
   // LOAD CITY DATA
   async function loadCityData() {
     try {
-      const res = await api.get(`${ML_BASE}/amu_by_city`);
+      const res = await api.get("/api/ml/amu_by_city");
       setCityData(res.data);
     } catch (err) {
       console.log("CITY ERROR", err);
@@ -86,7 +86,7 @@ export default function AdminDashboard() {
   // LOAD DAILY TREND
   async function loadTrend(area) {
     try {
-      const res = await api.post(`${ML_BASE}/area_amu_report`, { area });
+      const res = await api.post("/api/ml/area_amu_report", { area });
       setTrendData(res.data);
     } catch (err) {
       console.log("TREND ERROR", err);
