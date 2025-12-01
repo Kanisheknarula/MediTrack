@@ -1,143 +1,135 @@
-// backend/routes/request.js
 const express = require('express');
 const router = express.Router();
 const path = require('path');
-
-// try to use your actual Request model if present
-let RequestModel;
-try {
-  RequestModel = require('../models/Request');
-} catch (err) {
-  RequestModel = null; // we'll use an in-memory array as fallback
-}
-
-// multer upload middleware
-
-// new — matches your file upload filename uploads.js
 const upload = require('../middleware/uploads');
 
+// Models
+const TreatmentRequest = require('../models/TreatmentRequest');
 
-// demo in-memory store (fallback if no DB model)
-let demoRequests = [];
-
-/**
- * POST /api/requests/create
- * Accepts either:
- *  - multipart/form-data with field "photo" (camera upload) AND other fields in form-data, OR
- *  - application/json body
- *
- * Required fields: farmerId, animalId, problemDescription
- * Returns the created request as JSON. If photo uploaded, returns photoUrl = /uploads/<filename>
- */
+// ==========================================
+// 1. CREATE REQUEST (Farmer)
+// ==========================================
 router.post('/create', upload.single('photo'), async (req, res) => {
   try {
-    const farmerId = req.body.farmerId || req.body.farmerID || req.body.farmer;
-    const animalId = req.body.animalId || req.body.animalID || req.body.animal;
-    const problemDescription = req.body.problemDescription || req.body.problem || "";
+    const { farmerId, animalId, problemDescription } = req.body;
 
-    if (!farmerId || !animalId || !problemDescription.trim()) {
-      return res.status(400).json({ message: 'farmerId, animalId and problemDescription are required' });
+    if (!farmerId || !animalId || !problemDescription) {
+      return res.status(400).json({ message: 'All fields are required' });
     }
 
     let photoUrl = null;
-    if (req.file && req.file.filename) {
-      // file saved to backend/uploads/<filename>
+    if (req.file) {
       photoUrl = `/uploads/${req.file.filename}`;
     }
 
-    // If you have a Request mongoose model, save to DB
-    if (RequestModel && typeof RequestModel.create === 'function') {
-      const payload = {
-        farmerId,
-        animalId,
-        problemDescription,
-        photoUrl,
-        status: 'Pending',
-        createdAt: new Date()
-      };
-
-      const created = await RequestModel.create(payload);
-      // If your model uses different fields or population for prescription, adapt as needed
-      return res.status(201).json(created);
-    }
-
-    // FALLBACK: push to demoRequests (in-memory)
-    const newReq = {
-      _id: `req_${Date.now()}`,
+    const newRequest = new TreatmentRequest({
       farmerId,
       animalId,
       problemDescription,
       photoUrl,
-      status: 'Pending',
-      createdAt: new Date().toISOString()
-    };
-    demoRequests.unshift(newReq);
-    return res.status(201).json(newReq);
+      status: 'Pending', // Default status
+    });
+
+    await newRequest.save();
+    res.status(201).json({ message: 'Request created successfully', request: newRequest });
 
   } catch (err) {
-    console.error('Error in /api/requests/create:', err);
-    return res.status(500).json({ message: 'Server error while creating request' });
+    console.error("Create Request Error:", err);
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
-/**
- * GET /api/requests/my-requests/:farmerId
- * Returns list of requests for a farmer (most recent first)
- */
+// ==========================================
+// 2. GET PENDING REQUESTS (Vet Dashboard)
+// ==========================================
+router.get('/pending', async (req, res) => {
+  try {
+    // Find all requests where status is 'Pending'
+    // .populate() fills in the details for farmer and animal so you see names, not just IDs
+    const requests = await TreatmentRequest.find({ status: 'Pending' })
+      .populate('farmerId', 'name phone city')
+      .populate('animalId', 'animalTagId type breed')
+      .sort({ createdAt: -1 });
+
+    res.json(requests);
+  } catch (err) {
+    console.error("Fetch Pending Error:", err);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+// ==========================================
+// 3. GET MY ACCEPTED CASES (Vet Dashboard)
+// ==========================================
+router.get('/my-accepted/:vetId', async (req, res) => {
+  try {
+    const { vetId } = req.params;
+    
+    const requests = await TreatmentRequest.find({ status: 'Accepted', vetId: vetId })
+      .populate('farmerId', 'name phone')
+      .populate('animalId', 'animalTagId type')
+      .sort({ updatedAt: -1 });
+
+    res.json(requests);
+  } catch (err) {
+    console.error("Fetch Accepted Error:", err);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+// ==========================================
+// 4. ACCEPT REQUEST (Vet Action)
+// ==========================================
+router.post('/accept', async (req, res) => {
+  try {
+    const { requestId, vetId } = req.body;
+
+    await TreatmentRequest.findByIdAndUpdate(requestId, {
+      status: 'Accepted',
+      vetId: vetId
+    });
+
+    res.json({ message: 'Request Accepted' });
+  } catch (err) {
+    console.error("Accept Error:", err);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+// ==========================================
+// 5. DECLINE REQUEST (Vet Action)
+// ==========================================
+router.post('/decline', async (req, res) => {
+  try {
+    const { requestId, reason } = req.body;
+
+    await TreatmentRequest.findByIdAndUpdate(requestId, {
+      status: 'Declined',
+      declineReason: reason
+    });
+
+    res.json({ message: 'Request Declined' });
+  } catch (err) {
+    console.error("Decline Error:", err);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+// ==========================================
+// 6. GET REQUESTS FOR FARMER (Farmer Dashboard)
+// ==========================================
 router.get('/my-requests/:farmerId', async (req, res) => {
   try {
     const { farmerId } = req.params;
-    if (!farmerId) return res.status(400).json({ message: 'farmerId required' });
-
-    if (RequestModel && typeof RequestModel.find === 'function') {
-      // adapt populate keys if you have related models
-      const list = await RequestModel.find({ farmerId }).sort({ createdAt: -1 }).lean();
-      return res.json(list);
-    }
-
-    // fallback from demoRequests
-    const list = demoRequests.filter(r => r.farmerId === farmerId);
-    return res.json(list);
+    const requests = await TreatmentRequest.find({ farmerId })
+      .populate('vetId', 'name')
+      .populate('animalId', 'animalTagId')
+      .sort({ createdAt: -1 });
+    
+    res.json(requests);
   } catch (err) {
-    console.error('Error in /api/requests/my-requests/:farmerId', err);
-    return res.status(500).json({ message: 'Server error fetching requests' });
-  }
-});
-
-/**
- * DELETE /api/requests/:id
- * Removes a request (and deletes uploaded photo if present).
- * NOTE: protect this route with auth in production.
- */
-router.delete('/:id', async (req, res) => {
-  try {
-    const id = req.params.id;
-    if (!id) return res.status(400).json({ message: 'id required' });
-
-    // If using DB
-    if (RequestModel && typeof RequestModel.findByIdAndDelete === 'function') {
-      const found = await RequestModel.findByIdAndDelete(id).lean();
-      if (found && found.photoUrl) {
-        // delete the file
-        const fname = path.basename(found.photoUrl);
-        const fs = require('fs');
-        const fp = path.join(__dirname, '..', 'uploads', fname);
-        fs.unlink(fp, (err) => { /* ignore errors */ });
-      }
-      return res.json({ message: 'removed' });
-    }
-
-    // fallback in-memory
-    const prevLen = demoRequests.length;
-    demoRequests = demoRequests.filter(r => r._id !== id);
-    if (demoRequests.length === prevLen) {
-      return res.status(404).json({ message: 'not found' });
-    }
-    return res.json({ message: 'removed' });
-
-  } catch (err) {
-    console.error('Error deleting request:', err);
-    return res.status(500).json({ message: 'server error' });
+    console.error("Farmer Requests Error:", err);
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
