@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../api/api";
 import {
   Box,
   Flex,
@@ -41,7 +41,7 @@ ChartJS.register(
 );
 
 // VITE FIX
-const ML_BASE = import.meta.env.VITE_ML_BASE || "http://localhost:8001";
+const ML_BASE = "https://meditrack-hx50.onrender.com" || "http://localhost:8001";
 
 export default function AdminDashboard() {
   const [areas, setAreas] = useState([]);
@@ -57,7 +57,7 @@ export default function AdminDashboard() {
 
   async function loadAreas() {
     try {
-      const res = await axios.get(`${ML_BASE}/list_areas`);
+      const res = await api.get(`${ML_BASE}/list_areas`);
       setAreas(res.data);
 
       if (res.data.length > 0) {
@@ -76,7 +76,7 @@ export default function AdminDashboard() {
   // LOAD CITY DATA
   async function loadCityData() {
     try {
-      const res = await axios.get(`${ML_BASE}/amu_by_city`);
+      const res = await api.get(`${ML_BASE}/amu_by_city`);
       setCityData(res.data);
     } catch (err) {
       console.log("CITY ERROR", err);
@@ -86,7 +86,7 @@ export default function AdminDashboard() {
   // LOAD DAILY TREND
   async function loadTrend(area) {
     try {
-      const res = await axios.post(`${ML_BASE}/area_amu_report`, { area });
+      const res = await api.post(`${ML_BASE}/area_amu_report`, { area });
       setTrendData(res.data);
     } catch (err) {
       console.log("TREND ERROR", err);

@@ -1,6 +1,6 @@
 // src/components/RegistrarDashboard.jsx
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import api from '../api/api';
 import {
   Box, Button, FormControl, FormLabel, Heading, Input, Select,
   VStack, useToast, SimpleGrid, Text, HStack, Divider, Badge, Stack,
@@ -50,7 +50,7 @@ const RegistrarDashboard = ({ user }) => {
     const fetchFarmers = async () => {
       try {
         setLoadingFarmers(true);
-        const res = await axios.get("/api/registrar/all-farmers");
+        const res = await api.get("/api/registrar/all-farmers");
         if (!mounted) return;
         setFarmers(res.data || []);
         if (res.data && res.data.length > 0) {
@@ -101,7 +101,7 @@ const RegistrarDashboard = ({ user }) => {
       return;
     }
     try {
-      const res = await axios.get(`/api/registrar/farmer-animals/${farmerId}`);
+      const res = await api.get(`/api/registrar/farmer-animals/${farmerId}`);
       setRecentAnimals(res.data || []);
     } catch (err) {
       setRecentAnimals([]);
@@ -162,7 +162,7 @@ const RegistrarDashboard = ({ user }) => {
         groupName: formData.groupName || undefined
       };
 
-      const res = await axios.post("/api/registrar/add-animal", payload);
+      const res = await api.post("/api/registrar/add-animal", payload);
 
       toast({
         title: "Animal added",
@@ -228,7 +228,7 @@ const RegistrarDashboard = ({ user }) => {
         phone: formData.ownerPhone?.trim()
       };
       // NOTE: Backend endpoint assumed. Change path if your API differs.
-      await axios.put(`/api/registrar/update-farmer/${formData.ownerId}`, payload);
+      await api.put(`/api/registrar/update-farmer/${formData.ownerId}`, payload);
 
       toast({
         title: "Farmer info saved",
@@ -258,7 +258,7 @@ const RegistrarDashboard = ({ user }) => {
     if (!ok) return;
 
     try {
-      await axios.delete(`/api/registrar/remove-animal/${animalId}`);
+      await api.delete(`/api/registrar/remove-animal/${animalId}`);
       toast({ title: "Removed", description: "Animal removed successfully.", status: "success", duration: 2500, isClosable: true });
       // remove locally
       setRecentAnimals((prev) => prev.filter(a => !(a._id && a._id === animalId)));

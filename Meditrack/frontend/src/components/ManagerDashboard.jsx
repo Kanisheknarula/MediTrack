@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../api/api';
 
 // --- NEW CHAKRA IMPORTS ---
 import {
@@ -44,7 +44,7 @@ const ManagerDashboard = ({ user, token }) => {
 
     setIsLoading(true); // Show spinner
     try {
-      const response = await axios.get(
+      const response = await api.get(
         `/api/manager/check-animal/${searchQuery.toUpperCase()}`
       );
       setResult(response.data); // Save the entire response

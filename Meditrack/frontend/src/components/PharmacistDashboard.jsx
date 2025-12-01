@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/api';
 import BillingForm from './BillingForm'; // <-- This form will also be styled
 
 // --- NEW CHAKRA IMPORTS ---
@@ -35,7 +35,7 @@ const [loadingRecentBills, setLoadingRecentBills] = useState(false);
   // --- 1. FUNCTION: Get all new (unbilled) prescriptions ---
   const fetchNewPrescriptions = async () => {
     try {
-      const response = await axios.get(
+      const response = await api.get(
         '/api/pharmacist/new-prescriptions'
       );
       setNewPrescriptions(response.data);
@@ -60,7 +60,7 @@ const [loadingRecentBills, setLoadingRecentBills] = useState(false);
       setLoadingRecentBills(true);
       const token = localStorage.getItem("token");
 
-      const res = await axios.get("/api/pharmacist/bills/recent?limit=5", {
+      const res = await api.get("/api/pharmacist/bills/recent?limit=5", {
         headers: {
           Authorization: `Bearer ${token}`,
         },

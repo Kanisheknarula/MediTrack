@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/api';
 import {
   Box,
   Button,
@@ -38,7 +38,7 @@ const RequestManager = ({ user, token, animals }) => {
   // --- 1. FUNCTION: Get all of this farmer's past requests ---
   const fetchMyRequests = async () => {
     try {
-      const response = await axios.get(
+      const response = await api.get(
         `/api/requests/my-requests/${user.userId}`
       );
       setMyRequests(response.data);
@@ -82,7 +82,7 @@ const RequestManager = ({ user, token, animals }) => {
     }
 
     try {
-      const response = await axios.post(
+      const response = await api.post(
         '/api/requests/create',
         {
           farmerId: user.userId,

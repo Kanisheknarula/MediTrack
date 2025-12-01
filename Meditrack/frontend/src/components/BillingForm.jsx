@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/api';
 
 // --- NEW CHAKRA IMPORTS ---
 import {
@@ -64,7 +64,7 @@ const BillingForm = ({ prescription, pharmacistId, onClose }) => {
     }
 
     try {
-      await axios.post(
+      await api.post(
         '/api/pharmacist/create-bill',
         {
           prescriptionId: prescription._id,

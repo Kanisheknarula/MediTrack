@@ -1,6 +1,6 @@
 // src/components/FarmerDashboard.jsx
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import axios from "axios";
+import api from '../api/api';
 import RequestManager from "./RequestManager";
 import {
   Box,
@@ -65,7 +65,7 @@ export default function FarmerDashboard({ user, token }) {
         try {
           // eslint-disable-next-line no-console
           console.log("Trying animals endpoint:", url);
-          response = await axios.get(url);
+          response = await api.get(url);
           if (response && response.data) break;
         } catch (err) {
           response = null; // try next

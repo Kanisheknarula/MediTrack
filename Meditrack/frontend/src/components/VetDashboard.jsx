@@ -1,7 +1,7 @@
 // frontend/src/components/VetDashboard.jsx
 
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from '../api/api';
 import PrescriptionForm from "./PrescriptionForm";
 
 import {
@@ -53,8 +53,8 @@ const VetDashboard = ({ user }) => {
   const fetchAllRequests = async () => {
     try {
       const [pendingRes, acceptedRes] = await Promise.all([
-        axios.get("/api/requests/pending"),
-        axios.get(`/api/requests/my-accepted/${user.userId}`),
+        api.get("/api/requests/pending"),
+        api.get(`/api/requests/my-accepted/${user.userId}`),
       ]);
 
       setPendingRequests(pendingRes.data || []);
@@ -80,7 +80,7 @@ const VetDashboard = ({ user }) => {
       setLoadingRecent(true);
       const token = localStorage.getItem("token");
 
-      const res = await axios.get(
+      const res = await api.get(
         "/api/prescription/vet/recent?limit=5",
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -102,7 +102,7 @@ const VetDashboard = ({ user }) => {
   // ---------------- Accept Request ----------------
   const handleAccept = async (req) => {
     try {
-      await axios.post("/api/requests/accept", {
+      await api.post("/api/requests/accept", {
         requestId: req._id,
         vetId: user.userId,
       });
@@ -134,7 +134,7 @@ const VetDashboard = ({ user }) => {
     }
 
     try {
-      await axios.post("/api/requests/decline", {
+      await api.post("/api/requests/decline", {
         requestId: currentDeclineId,
         reason: declineReason,
       });

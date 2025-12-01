@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../api/api';
 
 // --- CHAKRA UI ---
 import {
@@ -87,8 +87,8 @@ const PrescriptionForm = ({ request, vetId, onClose , onCreated }) => {
         notes,
       };
 
-      const response = await axios.post(
-        "http://localhost:5000/api/prescription/create",
+      const response = await api.post(
+        "/api/prescription/create",
         payload,
         {
           headers: {
