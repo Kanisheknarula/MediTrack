@@ -57,7 +57,7 @@ app.use("/api/requests", require("./routes/request"));
 app.use("/api/prescription", require("./routes/prescription"));
 app.use("/api/pharmacist", require("./routes/pharmacist"));
 app.use("/api/manager", require("./routes/manager"));
-app.use("/api/register", require("./routes/registrar"));
+app.use("/api/registrar", require("./routes/registrar"));
 app.use("/api/amu", require("./routes/amuRoutes"));
 app.use("/api/ml", require("./routes/ml"));
 
