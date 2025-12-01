@@ -1,27 +1,10 @@
-// backend/models/AMU.js
 const mongoose = require("mongoose");
 
-const DailyTrendSchema = new mongoose.Schema({
-  dates: [String],
-  quantities: [Number],
-}, { _id: false });
-
-const MonthlySummarySchema = new mongoose.Schema({
-  monthly_mean: Number,
-  monthly_std: Number,
-  total_prescriptions: Number
-}, { _id: false });
-
+// This schema matches the actual data in your MongoDB 'amu' collection
 const AMUSchema = new mongoose.Schema({
-  area: { type: String, required: true, unique: true }, // e.g. 'indore'
-  city_name: { type: String }, // readable name if needed
-  total_prescriptions: { type: Number, default: 0 },
-  daily_trend: DailyTrendSchema,
-  mean_quantity: Number,
-  std_quantity: Number,
-  anomalies: [{ date: String, quantity: Number, reason: String }],
-  monthly_summary: MonthlySummarySchema,
-  createdAt: { type: Date, default: Date.now }
-});
+  area: String,      // e.g., "Indore"
+  quantity: Number,  // e.g., 52
+  date: String       // e.g., "2025-01-11"
+}, { collection: 'amu' }); // ⚠️ CRITICAL: Force it to look at the 'amu' collection, not 'amus'
 
-module.exports = mongoose.model("AMU", AMUSchema , "amu");
+module.exports = mongoose.model("AMU", AMUSchema);
