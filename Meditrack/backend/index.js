@@ -53,7 +53,7 @@ app.use(
 // -----------------------------------
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/admin", require("./routes/admin"));
-app.use("/api/animal", require("./routes/animal")); // <--- ADD THIS LINE
+app.use("/api/animals", require("./routes/animals")); // <--- ADD THIS LINE
 app.use("/api/requests", require("./routes/request"));
 app.use("/api/prescription", require("./routes/prescription"));
 app.use("/api/pharmacist", require("./routes/pharmacist"));
