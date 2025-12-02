@@ -7,13 +7,11 @@ const authMiddleware = require('../middleware/authMiddleware'); // Import the lo
 // URL: POST http://localhost:5000/api/animals/add
 router.post('/add', authMiddleware, async (req, res) => {
   try {
-    // --- THIS IS THE FIX ---
     // 1. Get the farmer's ID from the token (req.user)
     const ownerId = req.user.userId; 
     
     // 2. Get the animal data from the body
     const { animalTagId, type, breed, age, weight, groupName } = req.body;
-    // -------------------------
 
     // Check if this farmer already has an animal with this tag ID
     const existingAnimal = await Animal.findOne({ ownerId, animalTagId });
@@ -40,29 +38,40 @@ router.post('/add', authMiddleware, async (req, res) => {
 });
 
 // --- 2. GET ALL ANIMALS FOR A SPECIFIC FARMER ---
-// (We must also update this route to be secure)
 // URL: GET http://localhost:5000/api/animals/my-animals/:farmerId
 router.get('/my-animals/:farmerId', authMiddleware, async (req, res) => {
   try {
-    // Check if the logged-in user (from the token) is the same
-    // as the farmer they are trying to get animals for.
-    if (req.user.userId !== req.params.farmerId) {
-      return res.status(403).json({ message: 'Forbidden: You can only view your own animals.' });
+    const requestedFarmerId = req.params.farmerId;
+    const requestingUser = req.user; // Contains { userId, role }
+
+    // --- PERMISSION CHECK ---
+    // Allow if:
+    // 1. User is the owner (Farmer themselves)
+    // 2. OR User is a 'Vet' (Need to see animals to prescribe)
+    // 3. OR User is 'Admin' or 'Registrar' or 'Pharmacist'
+    
+    const isOwner = requestingUser.userId === requestedFarmerId;
+    const isProfessional = ['Vet', 'Admin', 'Registrar', 'Pharmacist'].includes(requestingUser.role);
+
+    if (!isOwner && !isProfessional) {
+      return res.status(403).json({ message: 'Forbidden: You do not have permission to view these animals.' });
     }
+    // ------------------------
     
     // Find all animals where the 'ownerId' matches the farmer's ID
-    const animals = await Animal.find({ ownerId: req.params.farmerId });
+    const animals = await Animal.find({ ownerId: requestedFarmerId });
 
+    // Return empty array instead of 404 to prevent frontend crashes if list is empty
     if (!animals) {
-      return res.status(404).json({ message: 'No animals found for this farmer.' });
+      return res.status(200).json([]); 
     }
 
     res.status(200).json(animals); // Send the list of animals
 
   } catch (error) {
+    console.error("Error fetching animals:", error);
     res.status(500).json({ message: 'Server error.', error: error.message });
   }
 });
 
-// This line MUST be at the very end
 module.exports = router;
