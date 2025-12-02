@@ -6,52 +6,88 @@ const Prescription = require("../models/Prescription");
 const TreatmentRequest = require("../models/TreatmentRequest");
 const Animal = require("../models/Animal");
 const User = require("../models/User");
+// --- NEW IMPORT: Essential for connecting prescriptions to graphs ---
+const AMU = require("../models/AMU"); 
 const authMiddleware = require("../middleware/authMiddleware");
 const { addEvent } = require("../blockchain/blockchainService");
 
 // =====================================================================
-// CREATE PRESCRIPTION (Fixed to use Token ID)
+// CREATE PRESCRIPTION (Fixed to update AMU/Graphs automatically)
 // =====================================================================
 async function handleCreatePrescription(req, res) {
   try {
     const {
       requestId,
-      // vetId,  <-- REMOVE THIS. Don't trust the body.
       animalId,
       medicines,
       withdrawalPeriodDays,
       notes,
     } = req.body;
 
-    // USE THE TOKEN ID (Ensures it matches the fetch route)
-   const vetId = req.user.userId;
+    // USE THE TOKEN ID
+    const vetId = req.user.userId;
 
     console.log("--- CREATING PRESCRIPTION ---");
-    console.log("Vet ID from Token:", vetId);
+    console.log("Vet ID:", vetId);
     console.log("Animal ID:", animalId);
 
-    // Validate vet exists
+    // 1. Validate vet exists & Get Location
     const vet = await User.findById(vetId);
     if (!vet) {
       return res.status(404).json({ success: false, message: "Vet not found" });
     }
 
-    const vetLocation = vet.city || "Unknown";
+    // Ensure we have a valid city. Default to 'Unknown' if missing.
+    const vetLocation = vet.city && vet.city.trim() !== "" ? vet.city : "Unknown";
 
+    // 2. Save the Prescription
     const newPrescription = new Prescription({
       requestId,
-      vetId, // Saved using the Token ID
+      vetId,
       animalId,
       medicines,
       withdrawalPeriodDays,
       notes,
-      location: vetLocation,
+      location: vetLocation, // This saves "Delhi" to prescriptions collection
     });
 
     const saved = await newPrescription.save();
     console.log("✅ Prescription Saved with ID:", saved._id);
 
-    // Update Treatment Request
+    // ------------------------------------------------------------------
+    // 🔥 CRITICAL FIX: Update AMU Collection for Graphs 🔥
+    // ------------------------------------------------------------------
+    try {
+      // Get today's date in YYYY-MM-DD format (matches your DB screenshot)
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Check if we already have a stats entry for this City + Date
+      let amuRecord = await AMU.findOne({ area: vetLocation, date: today });
+
+      if (amuRecord) {
+        // If exists, just increment the quantity
+        amuRecord.quantity += 1;
+        await amuRecord.save();
+        console.log(`📈 AMU Updated: Incrementing count for ${vetLocation} on ${today}`);
+      } else {
+        // If NOT exists (e.g., first prescription in Delhi today), create it
+        amuRecord = new AMU({
+          area: vetLocation,
+          date: today,
+          quantity: 1, // Start with 1
+          // Add other fields if your schema requires strict validation
+        });
+        await amuRecord.save();
+        console.log(`📊 AMU Created: New entry for ${vetLocation} on ${today}`);
+      }
+    } catch (amuErr) {
+      // We log this but don't stop the request if stats fail
+      console.error("❌ Warning: Failed to update AMU/Graph stats:", amuErr.message);
+    }
+    // ------------------------------------------------------------------
+
+
+    // 3. Update Treatment Request
     if (requestId) {
       await TreatmentRequest.findByIdAndUpdate(requestId, {
         status: "Completed",
@@ -59,7 +95,7 @@ async function handleCreatePrescription(req, res) {
       });
     }
 
-    // Update Animal Status
+    // 4. Update Animal Status
     if (animalId && withdrawalPeriodDays != null) {
       const withdrawalDate = new Date();
       withdrawalDate.setDate(withdrawalDate.getDate() + Number(withdrawalPeriodDays));
@@ -69,7 +105,7 @@ async function handleCreatePrescription(req, res) {
       });
     }
 
-    // Blockchain Log
+    // 5. Blockchain Log
     try {
       await addEvent("PrescriptionCreated", animalId, JSON.stringify({
           prescriptionId: saved._id.toString(),
@@ -101,17 +137,12 @@ async function handleCreatePrescription(req, res) {
 router.get("/vet/recent", authMiddleware, async (req, res) => {
   try {
     const vetId = req.user.userId;
-    console.log("--- FETCHING RECENT ---");
-    console.log("Searching for Vet ID:", vetId);
-
     const limit = parseInt(req.query.limit) || 5;
 
     const recent = await Prescription.find({ vetId })
       .sort({ createdAt: -1 })
       .limit(limit)
       .populate("animalId", "animalTagId");
-
-    console.log(`Found ${recent.length} prescriptions.`);
 
     return res.json({
       success: true,
