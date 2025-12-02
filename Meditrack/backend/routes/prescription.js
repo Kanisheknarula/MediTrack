@@ -6,41 +6,36 @@ const Prescription = require("../models/Prescription");
 const TreatmentRequest = require("../models/TreatmentRequest");
 const Animal = require("../models/Animal");
 const User = require("../models/User");
-// --- NEW IMPORT: Essential for connecting prescriptions to graphs ---
-const AMU = require("../models/AMU"); 
+const AMU = require("../models/AMU"); // Graph Model
 const authMiddleware = require("../middleware/authMiddleware");
 const { addEvent } = require("../blockchain/blockchainService");
 
 // =====================================================================
-// CREATE PRESCRIPTION (Fixed to update AMU/Graphs automatically)
+// CREATE PRESCRIPTION (Robust & Graph Connected)
 // =====================================================================
 async function handleCreatePrescription(req, res) {
   try {
-    const {
-      requestId,
-      animalId,
-      medicines,
-      withdrawalPeriodDays,
-      notes,
-    } = req.body;
+    console.log("📝 Incoming Prescription Request Body:", req.body);
 
-    // USE THE TOKEN ID
-    const vetId = req.user.userId;
-
-    console.log("--- CREATING PRESCRIPTION ---");
-    console.log("Vet ID:", vetId);
-    console.log("Animal ID:", animalId);
-
-    // 1. Validate vet exists & Get Location
-    const vet = await User.findById(vetId);
-    if (!vet) {
-      return res.status(404).json({ success: false, message: "Vet not found" });
+    // 1. SAFETY CHECK: Ensure User is Authenticated
+    if (!req.user || !req.user.userId) {
+      console.error("❌ Error: User not authenticated (req.user missing)");
+      return res.status(401).json({ success: false, message: "Unauthorized: User not found" });
     }
 
-    // Ensure we have a valid city. Default to 'Unknown' if missing.
-    const vetLocation = vet.city && vet.city.trim() !== "" ? vet.city : "Unknown";
+    const vetId = req.user.userId;
+    const { requestId, animalId, medicines, withdrawalPeriodDays, notes } = req.body;
 
-    // 2. Save the Prescription
+    // 2. SAFETY CHECK: Validate Vet Exists & Get Location
+    const vet = await User.findById(vetId);
+    if (!vet) {
+      return res.status(404).json({ success: false, message: "Vet not found in database" });
+    }
+
+    // Handle missing city gracefully (Prevents crash if city is undefined)
+    const vetLocation = (vet.city && vet.city.trim() !== "") ? vet.city : "Unknown";
+
+    // 3. Create & Save Prescription
     const newPrescription = new Prescription({
       requestId,
       vetId,
@@ -48,46 +43,43 @@ async function handleCreatePrescription(req, res) {
       medicines,
       withdrawalPeriodDays,
       notes,
-      location: vetLocation, // This saves "Delhi" to prescriptions collection
+      location: vetLocation, // Saves "Delhi"
     });
 
     const saved = await newPrescription.save();
     console.log("✅ Prescription Saved with ID:", saved._id);
 
-    // ------------------------------------------------------------------
-    // 🔥 CRITICAL FIX: Update AMU Collection for Graphs 🔥
-    // ------------------------------------------------------------------
+    // ==================================================================
+    // 🔥 CRITICAL FIX: Update AMU (Graph Data) Automatically 🔥
+    // ==================================================================
     try {
-      // Get today's date in YYYY-MM-DD format (matches your DB screenshot)
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       
-      // Check if we already have a stats entry for this City + Date
+      // Find existing record for this City + Date
       let amuRecord = await AMU.findOne({ area: vetLocation, date: today });
 
       if (amuRecord) {
-        // If exists, just increment the quantity
+        // Increment quantity if exists
         amuRecord.quantity += 1;
         await amuRecord.save();
-        console.log(`📈 AMU Updated: Incrementing count for ${vetLocation} on ${today}`);
+        console.log(`📈 AMU Updated: +1 for ${vetLocation} on ${today}`);
       } else {
-        // If NOT exists (e.g., first prescription in Delhi today), create it
+        // Create new record if missing
         amuRecord = new AMU({
           area: vetLocation,
           date: today,
-          quantity: 1, // Start with 1
-          // Add other fields if your schema requires strict validation
+          quantity: 1,
         });
         await amuRecord.save();
-        console.log(`📊 AMU Created: New entry for ${vetLocation} on ${today}`);
+        console.log(`📊 AMU Created: New entry for ${vetLocation}`);
       }
     } catch (amuErr) {
-      // We log this but don't stop the request if stats fail
-      console.error("❌ Warning: Failed to update AMU/Graph stats:", amuErr.message);
+      // Log error but DO NOT crash the request
+      console.error("⚠️ Warning: Failed to update AMU Graphs:", amuErr.message);
     }
-    // ------------------------------------------------------------------
+    // ==================================================================
 
-
-    // 3. Update Treatment Request
+    // 4. Update Treatment Request Status
     if (requestId) {
       await TreatmentRequest.findByIdAndUpdate(requestId, {
         status: "Completed",
@@ -95,7 +87,7 @@ async function handleCreatePrescription(req, res) {
       });
     }
 
-    // 4. Update Animal Status
+    // 5. Update Animal Status
     if (animalId && withdrawalPeriodDays != null) {
       const withdrawalDate = new Date();
       withdrawalDate.setDate(withdrawalDate.getDate() + Number(withdrawalPeriodDays));
@@ -105,29 +97,29 @@ async function handleCreatePrescription(req, res) {
       });
     }
 
-    // 5. Blockchain Log
+    // 6. Blockchain Logging (Wrapped to prevent crashes)
     try {
       await addEvent("PrescriptionCreated", animalId, JSON.stringify({
           prescriptionId: saved._id.toString(),
-          animalId,
           vetId,
           location: vetLocation,
-          createdAt: new Date().toISOString(),
+          date: new Date().toISOString(),
         })
       );
-    } catch (err) {
-      console.log("Blockchain log failed:", err.message);
+    } catch (bcErr) {
+      console.error("⚠️ Blockchain log failed:", bcErr.message);
     }
 
+    // 7. SUCCESS RESPONSE
     return res.status(201).json({
       success: true,
       message: "Prescription created successfully",
-      prescription: saved,
+      prescription: saved, // Frontend needs this!
     });
 
   } catch (err) {
-    console.error("Create prescription error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("❌ SERVER ERROR in create prescription:", err);
+    return res.status(500).json({ success: false, message: "Server error: " + err.message });
   }
 }
 
@@ -144,17 +136,13 @@ router.get("/vet/recent", authMiddleware, async (req, res) => {
       .limit(limit)
       .populate("animalId", "animalTagId");
 
-    return res.json({
-      success: true,
-      prescriptions: recent,
-    });
+    return res.json({ success: true, prescriptions: recent });
   } catch (err) {
-    console.error("Recent prescription fetch error:", err);
-    return res.status(500).json({ success: false, message: "Error fetching recent prescriptions" });
+    console.error("Fetch recent error:", err);
+    return res.status(500).json({ success: false, message: "Error fetching data" });
   }
 });
 
-// Routes Export
 router.post("/create", authMiddleware, handleCreatePrescription);
 router.post("/add", authMiddleware, handleCreatePrescription);
 
