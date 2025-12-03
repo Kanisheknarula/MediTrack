@@ -6,7 +6,8 @@ const Prescription = require("../models/Prescription");
 const TreatmentRequest = require("../models/TreatmentRequest");
 const Animal = require("../models/Animal");
 const User = require("../models/User");
-const AMU = require("../models/AMU"); // Graph Model
+// const AMU = require("../models/AMU"); // Graph Model
+const AMU = require("../models/amuModel"); // Matches your actual filename
 const authMiddleware = require("../middleware/authMiddleware");
 const { addEvent } = require("../blockchain/blockchainService");
 

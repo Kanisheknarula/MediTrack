@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const AMU = require("../models/AMU"); // This imports the correct model file (AMU.js)
+// const AMU = require("../models/AMU"); // This imports the correct model file (AMU.js)
+const AMU = require("../models/amuModel"); // Matches your actual filename
 
 // ------------------------------
 // 1. GET LIST OF AREAS (Cities)
