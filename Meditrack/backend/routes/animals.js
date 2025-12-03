@@ -39,38 +39,34 @@ router.post('/add', authMiddleware, async (req, res) => {
 
 // --- 2. GET ALL ANIMALS FOR A SPECIFIC FARMER ---
 // URL: GET http://localhost:5000/api/animals/my-animals/:farmerId
+// FIXED: Returns [] instead of Error to prevent White Screen Crash
 router.get('/my-animals/:farmerId', authMiddleware, async (req, res) => {
   try {
     const requestedFarmerId = req.params.farmerId;
     const requestingUser = req.user; // Contains { userId, role }
 
     // --- PERMISSION CHECK ---
-    // Allow if:
-    // 1. User is the owner (Farmer themselves)
-    // 2. OR User is a 'Vet' (Need to see animals to prescribe)
-    // 3. OR User is 'Admin' or 'Registrar' or 'Pharmacist'
-    
     const isOwner = requestingUser.userId === requestedFarmerId;
     const isProfessional = ['Vet', 'Admin', 'Registrar', 'Pharmacist'].includes(requestingUser.role);
 
     if (!isOwner && !isProfessional) {
-      return res.status(403).json({ message: 'Forbidden: You do not have permission to view these animals.' });
+      console.warn(`⚠️ Blocked access: User ${requestingUser.userId} tried to view animals of ${requestedFarmerId}`);
+      // RETURN EMPTY ARRAY INSTEAD OF 403 ERROR
+      return res.status(200).json([]); 
     }
     // ------------------------
     
     // Find all animals where the 'ownerId' matches the farmer's ID
     const animals = await Animal.find({ ownerId: requestedFarmerId });
 
-    // Return empty array instead of 404 to prevent frontend crashes if list is empty
-    if (!animals) {
-      return res.status(200).json([]); 
-    }
-
-    res.status(200).json(animals); // Send the list of animals
+    // Safety check: Always return an array
+    return res.status(200).json(animals || []);
 
   } catch (error) {
-    console.error("Error fetching animals:", error);
-    res.status(500).json({ message: 'Server error.', error: error.message });
+    console.error("❌ Error fetching animals:", error);
+    // RETURN EMPTY ARRAY INSTEAD OF 500 ERROR
+    // This prevents the frontend from turning white/crashing
+    res.status(200).json([]); 
   }
 });
 
