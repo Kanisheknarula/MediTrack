@@ -78,10 +78,26 @@ const PrescriptionForm = ({ request, vetId, onClose , onCreated }) => {
         return;
       }
 
+      // --- SAFETY FIX START ---
+      // We check if animalId is an object (has _id) or just a string
+      // If request.animalId is null/undefined, we handle it gracefully
+      const animalIdSafe = request.animalId?._id || request.animalId;
+
+      if (!animalIdSafe) {
+        toast({
+            title: "Error",
+            description: "Animal ID is missing. The animal might have been deleted.",
+            status: "error",
+            duration: 4000,
+        });
+        return;
+      }
+      // --- SAFETY FIX END ---
+
       const payload = {
         requestId: request._id,
         vetId: vetId,
-        animalId: request.animalId._id,
+        animalId: animalIdSafe, // <--- Using the Safe ID here
         medicines: medicines,
         withdrawalPeriodDays: Number(withdrawalPeriodDays),
         notes,
@@ -107,8 +123,8 @@ const PrescriptionForm = ({ request, vetId, onClose , onCreated }) => {
       setTxHash(response.data.txHash);
 
       if (onCreated) {
-  onCreated();
-}
+        onCreated();
+      }
 
       setTimeout(() => {
         onClose();
@@ -142,8 +158,9 @@ const PrescriptionForm = ({ request, vetId, onClose , onCreated }) => {
     >
       <VStack spacing={6}>
         <Heading size="lg">Create Prescription</Heading>
+        {/* Safety Check for displaying Tag ID */}
         <Text fontSize="lg">
-          For Animal: <strong>{request.animalId?.animalTagId}</strong>
+          For Animal: <strong>{request.animalId?.animalTagId || "Unknown ID"}</strong>
         </Text>
 
         <Divider />

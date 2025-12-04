@@ -10,18 +10,14 @@ import {
   HStack,
   Button,
   SimpleGrid,
-  Input,
-  InputGroup,
-  InputLeftElement,
   Spinner,
   Badge,
   useToast,
-  VisuallyHidden,
   Card,
   CardHeader,
   CardBody,
 } from "@chakra-ui/react";
-import { MdSearch, MdContentCopy, MdLocalHospital, MdPets, MdRefresh } from "react-icons/md";
+import { MdContentCopy, MdLocalHospital, MdPets, MdRefresh } from "react-icons/md";
 
 /**
  * FarmerDashboard — updated colors to match screenshot (primary teal/green).
@@ -43,7 +39,7 @@ export default function FarmerDashboard({ user, token }) {
   const farmerId = useMemo(() => user?.userId || user?.id || user?._id || null, [user]);
 
   // robust fetch function: tries several likely endpoints
-const fetchMyAnimals = async () => {
+  const fetchMyAnimals = async () => {
     setLoading(true);
     try {
       if (!farmerId) {
@@ -59,6 +55,7 @@ const fetchMyAnimals = async () => {
       ];
 
       let response = null;
+      // Try to find a working endpoint
       for (const url of candidates) {
         try {
           response = await api.get(url);
@@ -105,8 +102,17 @@ const fetchMyAnimals = async () => {
 
     } catch (err) {
       console.error("fetchMyAnimals error:", err);
-      toast({ title: "Error", description: "Could not load animals.", status: "error", duration: 4000 });
-      setAnimals([]);
+      setAnimals([]); // IMPORTANT: Reset to empty array so map doesn't crash
+
+      // Show specific helpful errors
+      if (err.response && err.response.status === 404) {
+          toast({ title: "Backend Error", description: "API Route not found. Check server.js", status: "error", duration: 5000 });
+      } else if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+          toast({ title: "Session Expired", description: "Please logout and login again.", status: "warning", duration: 5000 });
+      } else {
+          toast({ title: "Error", description: "Could not load animals.", status: "error", duration: 4000 });
+      }
+      
     } finally {
       setLoading(false);
     }
@@ -286,7 +292,3 @@ const fetchMyAnimals = async () => {
     </VStack>
   );
 }
-
-
-
-
