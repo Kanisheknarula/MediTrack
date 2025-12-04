@@ -43,12 +43,11 @@ export default function FarmerDashboard({ user, token }) {
   const farmerId = useMemo(() => user?.userId || user?.id || user?._id || null, [user]);
 
   // robust fetch function: tries several likely endpoints
-  const fetchMyAnimals = async () => {
+const fetchMyAnimals = async () => {
     setLoading(true);
     try {
       if (!farmerId) {
         setAnimals([]);
-        toast({ title: "Farmer not recognized", description: "Please login again.", status: "warning", duration: 3000 });
         setLoading(false);
         return;
       }
@@ -56,45 +55,57 @@ export default function FarmerDashboard({ user, token }) {
       const candidates = [
         `/api/animals/my-animals/${farmerId}`,
         `/api/animals/farmer/${farmerId}`,
-        `/api/animals/owner/${farmerId}`,
         `/api/animals?farmerId=${farmerId}`
       ];
 
       let response = null;
       for (const url of candidates) {
         try {
-          // eslint-disable-next-line no-console
-          console.log("Trying animals endpoint:", url);
           response = await api.get(url);
+          // Stop if we get a valid response object
           if (response && response.data) break;
         } catch (err) {
-          response = null; // try next
+          response = null; 
         }
       }
 
+      // 1. SAFETY CHECK: If no response or data is null/undefined
       if (!response || !response.data) {
         setAnimals([]);
-        toast({ title: "No animals found", description: "Registrar may need to add animals for you.", status: "info", duration: 3000 });
         setLoading(false);
         return;
       }
 
-      const raw = Array.isArray(response.data) ? response.data : (response.data.items || []);
-      const normalized = raw.map((a) => ({
-        _id: a._id || a.id || a.animalId || `${a.animalTagId || a.tag || 'unknown'}-${Math.random()}`,
-        animalTagId: a.animalTagId || a.tag || a.animalId || a.name || "Unknown",
-        type: a.type || a.animalType || "",
-        breed: a.breed || a.breedName || "",
-        age: a.age || a.years || null,
-        weight: a.weight || null,
-        groupName: a.groupName || a.shed || "",
-        raw: a
-      }));
+      // 2. ROBUST PARSING: Handle Array, Object with .animals, or Object with .items
+      let rawData = [];
+      if (Array.isArray(response.data)) {
+        rawData = response.data;
+      } else if (response.data.animals && Array.isArray(response.data.animals)) {
+        rawData = response.data.animals;
+      } else if (response.data.items && Array.isArray(response.data.items)) {
+        rawData = response.data.items;
+      }
+
+      // 3. NORMALIZE: Ensure we don't crash on null values inside the array
+      const normalized = rawData.map((a) => {
+        if (!a) return null; // Skip null entries
+        return {
+          _id: a._id || a.id || `temp-${Math.random()}`,
+          animalTagId: a.animalTagId || "Unknown",
+          type: a.type || "",
+          breed: a.breed || "",
+          age: a.age || null,
+          weight: a.weight || null,
+          groupName: a.groupName || "",
+          raw: a
+        };
+      }).filter(Boolean); // Remove nulls
 
       setAnimals(normalized);
+
     } catch (err) {
       console.error("fetchMyAnimals error:", err);
-      toast({ title: "Error", description: "Could not load animals. Check server.", status: "error", duration: 4000 });
+      toast({ title: "Error", description: "Could not load animals.", status: "error", duration: 4000 });
       setAnimals([]);
     } finally {
       setLoading(false);
