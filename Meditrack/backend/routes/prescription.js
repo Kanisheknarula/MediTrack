@@ -100,7 +100,7 @@ async function handleCreatePrescription(req, res) {
 
     // 6. Blockchain Logging (Wrapped to prevent crashes)
     try {
-      await addEvent("PrescriptionCreated", animalId, JSON.stringify({
+      addEvent("PrescriptionCreated", animalId, JSON.stringify({
           prescriptionId: saved._id.toString(),
           vetId,
           location: vetLocation,
