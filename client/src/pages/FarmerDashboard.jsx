@@ -1,11 +1,15 @@
 import { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../context/authContextCore';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { LogOut, PlusCircle, Activity, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import AIReportPanel from '../components/AIReportPanel';
+import MeditrackLogo from '../components/MeditrackLogo';
+import { useAppSettings } from '../context/AppSettingsContext';
 
 const FarmerDashboard = () => {
   const { user, logout } = useContext(AuthContext);
+  const { t } = useAppSettings();
   const navigate = useNavigate();
   
   const [animals, setAnimals] = useState([]);
@@ -55,9 +59,9 @@ const FarmerDashboard = () => {
       setAnimalId('');
       setSymptoms('');
       fetchData(); 
-      alert("Treatment request sent to nearby Vets!");
+      alert(t('treatmentRequestSuccess'));
     } catch (error) {
-      alert(error.response?.data?.message || "Error submitting request");
+      alert(error.response?.data?.message || t('treatmentRequestError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -77,45 +81,48 @@ const FarmerDashboard = () => {
       {/* Navigation */}
       <nav className="bg-white border-b border-slate-200 px-6 md:px-10 py-4 flex justify-between items-center shadow-sm w-full sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-green-100 text-green-700 rounded-lg">
-            <Activity size={28} />
+          <div className="rounded-lg bg-green-100 p-1.5 text-green-700">
+            <MeditrackLogo className="h-11 w-11" />
           </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-green-800 tracking-tight">
-            My Farm Dashboard
+          <h1 className="text-2xl md:text-3xl font-extrabold text-green-800">
+            {t('farmerCare')}
           </h1>
         </div>
         
         <div className="flex items-center gap-6">
           <div className="hidden md:block text-right">
             <p className="text-sm font-bold text-slate-800">{user?.name}</p>
-            <p className="text-xs text-slate-500 font-medium">Registered Farmer</p>
+            <p className="text-xs text-slate-500 font-medium">{t('registeredFarmer')}</p>
           </div>
           <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl font-bold transition-all">
             <LogOut size={18} />
-            <span className="hidden md:inline">Sign Out</span>
+            <span className="hidden md:inline">{t('signOut')}</span>
           </button>
         </div>
       </nav>
 
-      <main className="w-full px-4 md:px-8 lg:px-12 py-8 mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <main className="w-full px-4 md:px-8 lg:px-12 py-8 mx-auto space-y-8">
+        <AIReportPanel title={t('myMedicineAdherenceReport')} />
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* LEFT COLUMN: Request New Treatment Form */}
         <div className="lg:col-span-1">
           <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-100 sticky top-28">
             <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-              <PlusCircle className="text-green-600" /> Ask for Vet Help
+              <PlusCircle className="text-green-600" /> {t('askVetHelp')}
             </h2>
             
             <form onSubmit={handleSubmitRequest} className="space-y-5">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Select Animal</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">{t('selectAnimal')}</label>
                 <select 
                   required
                   value={animalId}
                   onChange={(e) => setAnimalId(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-green-500 outline-none transition-all"
                 >
-                  <option value="">-- Choose from your herd --</option>
+                  <option value="">{t('chooseFromHerd')}</option>
                   {animals.map(animal => (
                     <option key={animal._id} value={animal._id}>
                       {animal.animalId} - {animal.animalType} ({animal.breed})
@@ -125,12 +132,12 @@ const FarmerDashboard = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Describe Symptoms</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">{t('describeSymptoms')}</label>
                 <textarea 
                   required
                   value={symptoms}
                   onChange={(e) => setSymptoms(e.target.value)}
-                  placeholder="e.g., Stopped eating, high fever..."
+                  placeholder={t('symptomsPlaceholder')}
                   rows="4"
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-green-500 outline-none transition-all resize-none"
                 ></textarea>
@@ -141,7 +148,7 @@ const FarmerDashboard = () => {
                 disabled={isSubmitting}
                 className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-green-200 transition-all disabled:opacity-70"
               >
-                {isSubmitting ? 'Sending Alert...' : 'Submit Request'}
+                {isSubmitting ? t('sendingAlert') : t('submitRequest')}
               </button>
             </form>
           </div>
@@ -151,13 +158,13 @@ const FarmerDashboard = () => {
         <div className="lg:col-span-2">
           <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-100 min-h-[500px]">
             <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-              <Clock className="text-blue-600" /> My Treatment History
+              <Clock className="text-blue-600" /> {t('treatmentHistory')}
             </h2>
 
             {treatments.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-slate-400">
                 <Activity size={48} className="mb-4 opacity-50" />
-                <p>No treatment records found.</p>
+                <p>{t('noTreatmentRecords')}</p>
               </div>
             ) : (
               <div className="space-y-6">
@@ -178,12 +185,12 @@ const FarmerDashboard = () => {
                         'bg-green-100 text-green-700'
                       }`}>
                         {ticket.status === 'Completed' ? <CheckCircle size={14} /> : <Clock size={14} />}
-                        {ticket.status}
+                        {t(`status${ticket.status}`)}
                       </span>
                     </div>
                     
                     <p className="text-slate-700 mb-4 bg-white p-3 rounded-xl border border-slate-100">
-                      <span className="font-semibold block text-xs text-slate-400 uppercase mb-1">Symptoms Reported</span>
+                      <span className="font-semibold block text-xs text-slate-400 uppercase mb-1">{t('symptomsReported')}</span>
                       "{ticket.symptomsDescription}"
                     </p>
 
@@ -191,7 +198,7 @@ const FarmerDashboard = () => {
                     {ticket.status === 'Completed' && ticket.prescription?.length > 0 && (
                       <div className="mt-4 pt-4 border-t border-slate-200">
                         <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                          <CheckCircle size={16} className="text-green-600" /> Vet Prescription (Dr. {ticket.vet?.name})
+                          <CheckCircle size={16} className="text-green-600" /> {t('vetPrescription')} (Dr. {ticket.vet?.name})
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {ticket.prescription.map((med, idx) => (
@@ -200,7 +207,7 @@ const FarmerDashboard = () => {
                               <p className="text-sm text-slate-600 mb-2">{med.dosage}</p>
                               {med.withdrawalPeriodDays > 0 && (
                                 <p className="text-xs font-bold text-red-600 bg-red-50 p-2 rounded-lg flex items-center gap-1">
-                                  <AlertTriangle size={14} /> Withdrawal: {med.withdrawalPeriodDays} Days
+                                  <AlertTriangle size={14} /> {t('withdrawal')}: {med.withdrawalPeriodDays} {t('days')}
                                 </p>
                               )}
                             </div>
@@ -216,6 +223,7 @@ const FarmerDashboard = () => {
           </div>
         </div>
 
+        </div>
       </main>
     </div>
   );

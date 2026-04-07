@@ -430,13 +430,16 @@
 // export default VetDashboard;
 
 import { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../context/authContextCore';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
-import { Stethoscope, LogOut, CheckCircle, AlertCircle, FileText, Syringe, XCircle, Clock } from 'lucide-react';
+import { LogOut, CheckCircle, AlertCircle, FileText, Syringe, XCircle, Clock } from 'lucide-react';
+import MeditrackLogo from '../components/MeditrackLogo';
+import { useAppSettings } from '../context/AppSettingsContext';
 
 const VetDashboard = () => {
   const { user, logout } = useContext(AuthContext);
+  const { t } = useAppSettings();
   const navigate = useNavigate();
   
   // NEW: State for our Tab Toggle and History Data
@@ -449,7 +452,6 @@ const VetDashboard = () => {
   const [dosage, setDosage] = useState('');
   const [withdrawal, setWithdrawal] = useState('');
   const [notes, setNotes] = useState('');
-  const [activePrescriptionId, setActivePrescriptionId] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -475,7 +477,7 @@ const VetDashboard = () => {
     try {
       await api.put(`/treatments/${id}/respond`, { status: 'Accepted' });
       fetchData(); // Refresh both lists
-    } catch (error) {
+    } catch {
       alert("Error accepting case");
     }
   };
@@ -485,7 +487,7 @@ const VetDashboard = () => {
       try {
         await api.put(`/treatments/${id}/respond`, { status: 'Rejected' });
         fetchData(); 
-      } catch (error) {
+      } catch {
         alert("Error rejecting case.");
       }
     }
@@ -504,12 +506,10 @@ const VetDashboard = () => {
       await api.put(`/treatments/${id}/prescribe`, { prescriptionArray });
       
       alert("Prescription submitted successfully! Forwarded to Pharmacist.");
-      setActivePrescriptionId(null);
-      
       // Clear form
       setMedName(''); setDosage(''); setWithdrawal(''); setNotes('');
       fetchData(); // Refresh both lists so it moves to history!
-    } catch (error) {
+    } catch {
       alert("Error submitting prescription");
     }
   };
@@ -532,11 +532,11 @@ const VetDashboard = () => {
       
       <nav className="bg-white border-b border-slate-200 px-6 md:px-10 py-4 flex justify-between items-center shadow-sm w-full sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 text-blue-700 rounded-lg">
-            <Stethoscope size={28} />
+          <div className="rounded-lg bg-blue-100 p-1.5 text-blue-700">
+            <MeditrackLogo className="h-11 w-11" />
           </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">
-            Doctor's Portal
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-800">
+            {t('vetConsole')}
           </h1>
         </div>
         
@@ -547,7 +547,7 @@ const VetDashboard = () => {
           </div>
           <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl font-bold transition-all">
             <LogOut size={18} />
-            <span className="hidden md:inline">Sign Out</span>
+            <span className="hidden md:inline">{t('signOut')}</span>
           </button>
         </div>
       </nav>

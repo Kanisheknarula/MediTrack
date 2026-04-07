@@ -12,6 +12,7 @@ const treatmentRoutes = require('./routes/treatmentRoutes'); // NEW
 const pharmacistRoutes = require('./routes/pharmacistRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const registrarRoutes = require('./routes/registrarRoutes');
+const aiReportRoutes = require('./routes/aiReportRoutes');
 
 dotenv.config();
 connectDB();
@@ -30,9 +31,10 @@ app.use('/api/treatments', treatmentRoutes); // NEW
 app.use('/api/pharmacist', pharmacistRoutes); // NEW
 app.use('/api/admin', adminRoutes);
 app.use('/api/registrar', registrarRoutes);
+app.use('/api/ai-report', aiReportRoutes);
 
 app.get('/', (req, res) => {
-    res.send('MRL/AMU Farm Management API is running...');
+    res.send('Meditrack API is running...');
 });
 
 const PORT = process.env.PORT || 5000;

@@ -1,18 +1,12 @@
-import { createContext, useState, useEffect } from 'react';
+import { useState } from 'react';
 import api from '../api';
-
-export const AuthContext = createContext();
+import { AuthContext } from './authContextCore';
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-
-  // Check if a user is already logged in when the app loads
-  useEffect(() => {
+  const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
 
   const login = async (phoneNumber, password) => {
     try {
@@ -45,7 +39,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, registerUser,logout }}>
+    <AuthContext.Provider value={{ user, login, registerUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

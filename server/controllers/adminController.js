@@ -22,7 +22,7 @@ const getDashboardStats = async (req, res) => {
             { $unwind: "$dispensedMedicines" }, // Break apart the medicine arrays
             { 
                 $group: { 
-                    _id: "$dispensedMedicines.medicineName", 
+                    _id: { $ifNull: ["$dispensedMedicines.medicineName", "Unspecified medicine"] }, 
                     timesPrescribed: { $sum: 1 } 
                 } 
             },

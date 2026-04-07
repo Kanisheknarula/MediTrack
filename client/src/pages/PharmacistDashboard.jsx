@@ -188,14 +188,17 @@
 
 // export default PharmacistDashboard;
 
-import { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { useState, useEffect, useContext, useCallback } from 'react';
+import { AuthContext } from '../context/authContextCore';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
-import { Store, LogOut, CheckCircle, Receipt, CreditCard, AlertCircle, Clock, FileCheck } from 'lucide-react';
+import { LogOut, CheckCircle, Receipt, CreditCard, AlertCircle, Clock, FileCheck } from 'lucide-react';
+import MeditrackLogo from '../components/MeditrackLogo';
+import { useAppSettings } from '../context/AppSettingsContext';
 
 const PharmacistDashboard = () => {
   const { user, logout } = useContext(AuthContext);
+  const { t } = useAppSettings();
   const navigate = useNavigate();
   
   // State Management
@@ -210,11 +213,7 @@ const PharmacistDashboard = () => {
   const [quantityNotes, setQuantityNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, [activeTab]); // Refetch when tabs change
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       if (activeTab === 'pending') {
@@ -229,7 +228,11 @@ const PharmacistDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]); // Refetch when tabs change
 
   const handleGenerateBill = async (e, ticket) => {
     e.preventDefault();
@@ -268,7 +271,7 @@ const PharmacistDashboard = () => {
   if (loading && pendingBills.length === 0 && history.length === 0) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-emerald-600"></div>
       </div>
     );
   }
@@ -278,22 +281,22 @@ const PharmacistDashboard = () => {
       
       <nav className="bg-white border-b border-slate-200 px-6 md:px-10 py-4 flex justify-between items-center shadow-sm w-full sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-100 text-purple-700 rounded-lg">
-            <Store size={28} />
+          <div className="rounded-lg bg-emerald-100 p-1.5 text-emerald-700">
+            <MeditrackLogo className="h-11 w-11" />
           </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">
-            Pharmacy Gateway
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-800">
+            {t('pharmacy')}
           </h1>
         </div>
         
         <div className="flex items-center gap-6">
           <div className="hidden md:block text-right">
             <p className="text-sm font-bold text-slate-800">{user?.name}</p>
-            <p className="text-xs text-purple-600 font-bold">{user?.city} Branch</p>
+            <p className="text-xs text-emerald-600 font-bold">{user?.city} Branch</p>
           </div>
           <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl font-bold transition-all">
             <LogOut size={18} />
-            <span className="hidden md:inline">Sign Out</span>
+            <span className="hidden md:inline">{t('signOut')}</span>
           </button>
         </div>
       </nav>
@@ -314,13 +317,13 @@ const PharmacistDashboard = () => {
           <div className="flex bg-slate-200 p-1 rounded-xl w-full md:w-auto">
             <button 
               onClick={() => setActiveTab('pending')}
-              className={`flex-1 md:flex-none px-6 py-2 rounded-lg font-bold transition-all ${activeTab === 'pending' ? 'bg-white text-purple-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`flex-1 md:flex-none px-6 py-2 rounded-lg font-bold transition-all ${activeTab === 'pending' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Active Queue
             </button>
             <button 
               onClick={() => setActiveTab('history')}
-              className={`flex-1 md:flex-none px-6 py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'history' ? 'bg-white text-purple-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`flex-1 md:flex-none px-6 py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'history' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
               <Clock size={16} /> Bill Logs
             </button>
@@ -348,7 +351,7 @@ const PharmacistDashboard = () => {
                         </h3>
                         <p className="text-slate-500 font-medium">Ph: {ticket.farmer?.phoneNumber}</p>
                       </div>
-                      <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold flex items-center gap-1">
+                      <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold flex items-center gap-1">
                         <Receipt size={14} /> Unpaid
                       </span>
                     </div>
@@ -366,31 +369,31 @@ const PharmacistDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="p-6 md:w-1/3 bg-purple-50/30 flex flex-col justify-center">
+                  <div className="p-6 md:w-1/3 bg-emerald-50/30 flex flex-col justify-center">
                     {activeBillId === ticket._id ? (
                       <form onSubmit={(e) => handleGenerateBill(e, ticket)} className="space-y-4">
                         <div>
                           <label className="block text-xs font-bold text-slate-600 mb-1">Total Amount (₹)</label>
-                          <input type="number" required min="1" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} className="w-full p-3 rounded-lg border border-slate-200 outline-none focus:border-purple-500 font-bold" placeholder="e.g. 450" />
+                          <input type="number" required min="1" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} className="w-full p-3 rounded-lg border border-slate-200 outline-none focus:border-emerald-500 font-bold" placeholder="e.g. 450" />
                         </div>
                         <div>
                           <label className="block text-xs font-bold text-slate-600 mb-1">Quantity Dispensed</label>
-                          <input type="text" required value={quantityNotes} onChange={e => setQuantityNotes(e.target.value)} className="w-full p-3 rounded-lg border border-slate-200 outline-none focus:border-purple-500" placeholder="e.g. 2 Bottles" />
+                          <input type="text" required value={quantityNotes} onChange={e => setQuantityNotes(e.target.value)} className="w-full p-3 rounded-lg border border-slate-200 outline-none focus:border-emerald-500" placeholder="e.g. 2 Bottles" />
                         </div>
                         <div className="flex gap-2">
                           <button type="button" onClick={() => setActiveBillId(null)} className="px-4 py-3 text-slate-500 hover:bg-slate-100 rounded-xl font-bold transition-all">Cancel</button>
-                          <button type="submit" disabled={isSubmitting} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all disabled:opacity-70">
+                          <button type="submit" disabled={isSubmitting} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all disabled:opacity-70">
                             {isSubmitting ? 'Processing...' : 'Collect Pay'}
                           </button>
                         </div>
                       </form>
                     ) : (
                       <div className="text-center">
-                        <AlertCircle className="mx-auto text-purple-400 mb-2" size={32} />
+                        <AlertCircle className="mx-auto text-emerald-500 mb-2" size={32} />
                         <p className="text-sm text-slate-600 font-medium mb-4">Medicines are ready for pickup. Bill needs to be generated.</p>
                         <button 
                           onClick={() => setActiveBillId(ticket._id)}
-                          className="w-full flex items-center justify-center gap-2 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-lg shadow-purple-200 transition-all transform hover:-translate-y-0.5"
+                          className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-200 transition-all transform hover:-translate-y-0.5"
                         >
                           <CreditCard size={18} /> Process Bill
                         </button>
@@ -425,7 +428,7 @@ const PharmacistDashboard = () => {
                       <p className="text-slate-500 text-sm mt-1">Farmer: {log.treatment?.farmer?.name || 'Unknown'}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-extrabold text-purple-700">₹{log.totalBillAmount}</p>
+                      <p className="text-2xl font-extrabold text-emerald-700">Rs. {log.totalBillAmount}</p>
                       <p className="text-xs font-bold text-slate-400 mt-1">{new Date(log.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>

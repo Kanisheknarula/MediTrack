@@ -4,7 +4,6 @@
 
 const User = require('../models/User');
 const Animal = require('../models/Animal');
-const bcrypt = require('bcryptjs');
 
 const onboardOfflineFarmer = async (req, res) => {
     try {
@@ -14,13 +13,10 @@ const onboardOfflineFarmer = async (req, res) => {
         let farmer = await User.findOne({ phoneNumber });
         
         if (!farmer) {
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash('EcoVet123!', salt);
-            
             farmer = await User.create({
                 name,
                 phoneNumber,
-                password: hashedPassword,
+                password: 'Meditrack123!',
                 role: 'Farmer',
                 city: req.user.city
             });
