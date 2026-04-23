@@ -1,13 +1,4 @@
-# 💊 MediTrack
-
-A smart medicine adherence tracking system that helps users manage their medication schedules, detect missed doses, and track adherence in real-time.
-
----
-
-## 🚀 Features
-
-- 📅 Medicine schedule management  
-- ⏰ Real-time dose tracking  # 🌿 Meditrack – AI-Based Medicine Adherence Monitoring System
+# 🌿 Meditrack – AI-Based Medicine Adherence Monitoring System
 
 Meditrack is an intelligent healthcare monitoring system designed to track medicine intake, analyze user behavior, and generate AI-driven insights to improve adherence and health outcomes.
 
@@ -150,34 +141,3 @@ BTech CSE | Data Science Enthusiast
 ## ⭐ Note
 
 This project demonstrates how AI-driven insights can be applied to healthcare monitoring systems using simple, scalable logic and interactive visualization.
-
-- ❌ Missed dose detection  
-- 📊 Adherence percentage calculation  
-- 📈 Dashboard with insights  
-- 🔗 Full-stack integration (Frontend + Backend + Database)
-
----
-
-## 🛠️ Tech Stack
-
-- Frontend: React.js  
-- Backend: Node.js, Express.js  
-- Database: MongoDB  
-- Other: REST APIs
-
----
-
-## 🧠 How It Works
-
-- Users add their medicines and dosage timings  
-- System tracks whether doses are taken or missed  
-- Calculates adherence percentage  
-- Displays insights on dashboard  
-
----
-
-## ⚙️ Installation
-
-```bash
-git clone https://github.com/your-username/MediTrack.git
-cd MediTrack
