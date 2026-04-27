@@ -16,21 +16,6 @@ const Login = () => {
   const { t } = useAppSettings();
   const navigate = useNavigate();
 
-  const demoAccounts = [
-    { label: 'Admin', phoneNumber: '9000000001' },
-    { label: 'Registrar', phoneNumber: '9000000002' },
-    { label: 'Vet', phoneNumber: '9000000003' },
-    { label: 'Pharmacist', phoneNumber: '9000000004' },
-    { label: 'Farmer', phoneNumber: '9000000039' },
-  ];
-
-  const fillDemoAccount = (account) => {
-    setPhoneNumber(account.phoneNumber);
-    setPassword('Meditrack123!');
-    setShowPassword(true);
-    setError('');
-  };
-
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -148,22 +133,6 @@ const Login = () => {
           <p className="text-center text-sm text-slate-500 mt-6">
             {t('noAccount')} <Link to="/register" className="text-green-600 font-bold hover:underline">{t('signupHere')}</Link>
           </p>
-
-          <div className="mt-6 rounded-lg border border-emerald-100 bg-emerald-50 p-4">
-            <p className="mb-3 text-xs font-black uppercase text-emerald-800">{t('demoShortcuts')}</p>
-            <div className="grid grid-cols-2 gap-2">
-              {demoAccounts.map((account) => (
-                <button
-                  key={account.phoneNumber}
-                  type="button"
-                  onClick={() => fillDemoAccount(account)}
-                  className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100"
-                >
-                  {account.label}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
       </div>
