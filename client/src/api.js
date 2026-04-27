@@ -4,7 +4,6 @@ const api = axios.create({
   baseURL: `${import.meta.env.VITE_API_URL}/api`
 });
 
-// Attach token
 api.interceptors.request.use((config) => {
   const user = JSON.parse(localStorage.getItem("user"));
   if (user && user.token) {
